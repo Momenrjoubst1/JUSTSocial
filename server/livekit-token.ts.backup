@@ -1,0 +1,331 @@
+/**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * LiveKit Token Generation API
+ * 
+ * A simple Express server that generates access tokens for LiveKit rooms.
+ * Implements a basic room matching system:
+ *  - When requesting a token, checks for rooms with only one participant
+ *  - If found: adds user to that room
+ *  - If not: creates a new room with a random name
+ * 
+ * Run: npm run server (or node --loader tsx server/livekit-token.ts)
+ * ════════════════════════════════════════════════════════════════════════════════
+ */
+
+import './loadEnv.js';
+import express, { Request, Response } from 'express';
+import { AccessToken } from 'livekit-server-sdk';
+import { v4 as uuidv4 } from 'uuid';
+import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import moderationRouter, { checkIsBanned } from './moderation.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: '5mb' })); // increased for base64 screenshots
+
+// Mount moderation router
+app.use('/api/moderation', moderationRouter);
+
+// Simple in-memory room system
+// In production, use Redis or a database
+interface RoomInfo {
+  participants: number;
+  country?: string;
+  createdAt: number;
+  lastUpdated: number;
+}
+
+const activeRooms = new Map<string, RoomInfo>();
+
+// Clean up stale rooms every 30 seconds
+// Rooms with 2 participants: remove after 60s of inactivity (they may be ghost entries)
+// Rooms with 0-1 participants: remove after 90s (waiting room expired)
+setInterval(() => {
+  const now = Date.now();
+  for (const [roomName, info] of activeRooms.entries()) {
+    const age = now - info.lastUpdated;
+    if (
+      (info.participants >= 2 && age > 60 * 1000) ||
+      (info.participants <= 1 && age > 90 * 1000) ||
+      age > 3 * 60 * 1000 // hard cap: any room older than 3 minutes
+    ) {
+      activeRooms.delete(roomName);
+      console.log(`🧹 Cleaned stale room: ${roomName} (${info.participants}p, ${Math.round(age / 1000)}s old)`);
+    }
+  }
+}, 30 * 1000);
+
+const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
+const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
+const LIVEKIT_URL = process.env.LIVEKIT_URL;
+
+if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !LIVEKIT_URL) {
+  console.error(
+    '❌ Missing environment variables: LIVEKIT_API_KEY, LIVEKIT_API_SECRET, or LIVEKIT_URL'
+  );
+  process.exit(1);
+}
+
+/**
+ * Find a room with only one participant, or create a new one
+ * Prioritizes matching users with the same country.
+ */
+function findOrCreateRoom(userCountry?: string): string {
+  // Strict country matching: only match with same country
+  if (userCountry) {
+    for (const [roomName, info] of activeRooms.entries()) {
+      if (info.participants === 1 && info.country === userCountry) {
+        info.participants = 2;
+        info.lastUpdated = Date.now();
+        console.log(`✅ Connected 2 users from ${userCountry} to existing room: ${roomName}`);
+        return roomName;
+      }
+    }
+  }
+
+  // No matching room found, create a new one and wait
+  const newRoomName = `room_${uuidv4().substring(0, 8)}`;
+  activeRooms.set(newRoomName, {
+    participants: 1,
+    country: userCountry,
+    createdAt: Date.now(),
+    lastUpdated: Date.now(),
+  });
+  console.log(`🆕 Created new room for ${userCountry || 'unknown'}: ${newRoomName}`);
+  return newRoomName;
+}
+
+/**
+ * GET /api/livekit-token
+ * Generate an access token for joining a LiveKit room
+ */
+app.get('/api/livekit-token', async (req: Request, res: Response) => {
+  try {
+    const country = req.query.country as string | undefined;
+    const fingerprint = req.query.fingerprint as string | undefined;
+
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    const ipStr = typeof ip === 'string' ? ip.split(',')[0].trim() : String(ip);
+
+    // Hard redirect: check if banned before token is even generated.
+    const banCheck = await checkIsBanned(fingerprint, ipStr);
+    if (banCheck && banCheck.banned) {
+      res.status(403).json({ error: 'Access Denied: User is banned', banned: true });
+      return;
+    }
+
+    // Generate a unique identity for this user
+    const identity = `user_${uuidv4().substring(0, 8)}`;
+
+    // Find or create a room based on country
+    const roomName = findOrCreateRoom(country);
+
+    // Create access token
+    const token = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET, {
+      identity,
+      metadata: JSON.stringify({ country: country || 'unknown' }),
+      ttl: 24 * 60 * 60, // 24 hours
+    });
+
+    // Grant permissions
+    token.addGrant({
+      room: roomName,
+      roomJoin: true,
+      canPublish: true,
+      canPublishData: true,
+      canSubscribe: true,
+    });
+
+    // Sign the token
+    const jwt = await token.toJwt();
+
+    res.json({
+      token: jwt,
+      roomName,
+      url: LIVEKIT_URL,
+    });
+
+    console.log(`🎫 Token generated for user: ${identity} in room: ${roomName}`);
+  } catch (error) {
+    console.error('❌ Error generating token:', error);
+    res.status(500).json({
+      error: 'Failed to generate token',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * POST /api/livekit-token/leave
+ * Decrement participant count when a user leaves a room
+ */
+app.post('/api/livekit-token/leave', (req: Request, res: Response) => {
+  const { roomName } = req.body;
+
+  if (!roomName) {
+    res.status(400).json({ error: 'roomName is required' });
+    return;
+  }
+
+  const room = activeRooms.get(roomName);
+  if (room) {
+    room.participants = Math.max(0, room.participants - 1);
+    room.lastUpdated = Date.now();
+
+    if (room.participants === 0) {
+      activeRooms.delete(roomName);
+      console.log(`🗑️  Room removed (empty): ${roomName}`);
+    } else {
+      console.log(`👋 Participant left room ${roomName} — ${room.participants} remaining`);
+    }
+
+    res.json({ ok: true, roomName, participants: room?.participants ?? 0 });
+  } else {
+    // Room already cleaned up — that's fine
+    res.json({ ok: true, roomName, participants: 0 });
+  }
+});
+
+/**
+ * GET /api/livekit-token/room-status
+ * Get current room status (for debugging)
+ */
+app.get('/api/livekit-token/room-status', (req: Request, res: Response) => {
+  const status = Array.from(activeRooms.entries()).map(([name, info]) => ({
+    name,
+    participants: info.participants,
+    createdAt: new Date(info.createdAt).toISOString(),
+  }));
+
+  res.json({
+    totalRooms: activeRooms.size,
+    rooms: status,
+  });
+});
+
+/**
+ * Health check endpoint
+ */
+app.get('/api/health', (req: Request, res: Response) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+/**
+ * POST /api/agent/start
+ * Start AI Agent for a specific room
+ * وبدء وكيل ذكي في غرفة معينة
+ */
+const { exec } = await import('child_process');
+const { promisify } = await import('util');
+
+const runningAgents = new Map<string, any>();
+
+app.post('/api/agent/start', async (req: Request, res: Response) => {
+  try {
+    const { roomName } = req.body;
+
+    if (!roomName) {
+      res.status(400).json({ error: 'roomName is required' });
+      return;
+    }
+
+    // Check if agent already running
+    if (runningAgents.has(roomName)) {
+      res.status(409).json({
+        error: 'Agent already running for this room',
+        roomName
+      });
+      return;
+    }
+
+    // Start agent process
+    const agentPath = path.join(__dirname, '../livekit-agent-lite.py');
+    const process = exec(
+      `python "${agentPath}" "${roomName}"`,
+      (error: any, stdout: string, stderr: string) => {
+        if (error) {
+          console.error(`❌ Agent error for ${roomName}:`, stderr);
+          runningAgents.delete(roomName);
+        } else {
+          console.log(`✅ Agent output for ${roomName}:`, stdout);
+        }
+      }
+    );
+
+    runningAgents.set(roomName, process);
+
+    // Auto-cleanup after 1 hour
+    setTimeout(() => {
+      const p = runningAgents.get(roomName);
+      if (p) {
+        (p as any).kill();
+        runningAgents.delete(roomName);
+        console.log(`⏰ Auto-stopped agent for room: ${roomName}`);
+      }
+    }, 3600000); // 1 hour
+
+    res.json({
+      success: true,
+      message: `✅ Agent started for room: ${roomName}`,
+      roomName
+    });
+
+    console.log(`🤖 Agent started - Room: ${roomName}`);
+
+  } catch (error: any) {
+    console.error('❌ Failed to start agent:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+/**
+ * POST /api/agent/stop
+ * Stop AI Agent for a specific room
+ * إيقاف وكيل ذكي في غرفة معينة
+ */
+app.post('/api/agent/stop', (req: Request, res: Response) => {
+  try {
+    const { roomName } = req.body;
+
+    if (!roomName) {
+      res.status(400).json({ error: 'roomName is required' });
+      return;
+    }
+
+    const process = runningAgents.get(roomName);
+    if (process) {
+      (process as any).kill();
+      runningAgents.delete(roomName);
+
+      res.json({
+        success: true,
+        message: '✅ Agent stopped'
+      });
+
+      console.log(`⛔ Agent stopped - Room: ${roomName}`);
+    } else {
+      res.status(404).json({ error: 'No agent running for this room' });
+    }
+
+  } catch (error: any) {
+    console.error('❌ Failed to stop agent:', error);
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+// Start server
+const PORT = process.env.PORT || 3001;
+app.listen(Number(PORT), '0.0.0.0', () => {
+  console.log(`\n✅ LiveKit Token Server running on http://localhost:${PORT}`);
+  console.log(`📝 API Endpoint: http://localhost:${PORT}/api/livekit-token`);
+  console.log(`🔍 Status Endpoint: http://localhost:${PORT}/api/livekit-token/room-status`);
+  console.log(`💓 Health Check: http://localhost:${PORT}/api/health`);
+  console.log(`🤖 Agent Start: POST http://localhost:${PORT}/api/agent/start`);
+  console.log(`⛔ Agent Stop: POST http://localhost:${PORT}/api/agent/stop\n`);
+});

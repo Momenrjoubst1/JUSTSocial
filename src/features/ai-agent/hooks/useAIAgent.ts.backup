@@ -1,0 +1,86 @@
+/**
+ * useAIAgent — Hook for controlling AI Agent in video chat
+ * للتحكم بالوكيل الذكي في الفيديو شات
+ */
+
+import { useState, useCallback } from 'react';
+
+export interface UseAIAgentReturn {
+  agentActive: boolean;
+  agentLoading: boolean;
+  agentError: string | null;
+  startAgent: (roomName: string) => Promise<void>;
+  stopAgent: (roomName: string) => Promise<void>;
+}
+
+export function useAIAgent(): UseAIAgentReturn {
+  const [agentActive, setAgentActive] = useState(false);
+  const [agentLoading, setAgentLoading] = useState(false);
+  const [agentError, setAgentError] = useState<string | null>(null);
+
+  const startAgent = useCallback(async (roomName: string) => {
+    try {
+      setAgentLoading(true);
+      setAgentError(null);
+
+      const response = await fetch('/api/agent/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomName })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to start agent');
+      }
+
+      const data = await response.json();
+      console.log('✅ Agent started:', data);
+      setAgentActive(true);
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      setAgentError(message);
+      console.error('❌ Error starting agent:', message);
+    } finally {
+      setAgentLoading(false);
+    }
+  }, []);
+
+  const stopAgent = useCallback(async (roomName: string) => {
+    try {
+      setAgentLoading(true);
+      setAgentError(null);
+
+      const response = await fetch('/api/agent/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomName })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to stop agent');
+      }
+
+      const data = await response.json();
+      console.log('✅ Agent stopped:', data);
+      setAgentActive(false);
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      setAgentError(message);
+      console.error('❌ Error stopping agent:', message);
+    } finally {
+      setAgentLoading(false);
+    }
+  }, []);
+
+  return {
+    agentActive,
+    agentLoading,
+    agentError,
+    startAgent,
+    stopAgent
+  };
+}

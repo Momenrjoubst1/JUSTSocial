@@ -1,0 +1,104 @@
+/**
+ * API Endpoint for starting AI Agent
+ * بدء الوكيل الذكي
+ */
+
+import express, { Request, Response } from 'express';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const execAsync = promisify(exec);
+
+// Track running agent processes
+const runningAgents = new Map<string, NodeJS.Timeout>();
+
+export async function startAgent(req: Request, res: Response) {
+  try {
+    const { roomName } = req.body;
+
+    if (!roomName) {
+      return res.status(400).json({ error: 'roomName is required' });
+    }
+
+    // Prevent duplicate agents for same room
+    if (runningAgents.has(roomName)) {
+      return res.status(409).json({
+        error: 'Agent already running for this room',
+        roomName
+      });
+    }
+
+    // Start agent process
+    const projectRoot = path.join(__dirname, '..');
+    const agentPath = path.join(projectRoot, 'livekit-agent.py');
+
+    const process = exec(
+      `python "${agentPath}" "${roomName}"`,
+      { cwd: projectRoot },
+      (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Agent error for ${roomName}:`, stderr);
+          runningAgents.delete(roomName);
+        }
+      }
+    );
+
+    // Store process
+    runningAgents.set(roomName, process as any);
+
+    // Auto-cleanup after 1 hour
+    const timeout = setTimeout(() => {
+      killAgent(roomName);
+    }, 3600000); // 1 hour
+
+    return res.status(200).json({
+      success: true,
+      message: `✅ Agent started for room: ${roomName}`,
+      roomName
+    });
+
+  } catch (error) {
+    console.error('Failed to start agent:', error);
+    return res.status(500).json({ error: String(error) });
+  }
+}
+
+export async function stopAgent(req: Request, res: Response) {
+  try {
+    const { roomName } = req.body;
+
+    if (!roomName) {
+      return res.status(400).json({ error: 'roomName is required' });
+    }
+
+    const killed = killAgent(roomName);
+
+    if (killed) {
+      return res.status(200).json({
+        success: true,
+        message: '✅ Agent stopped'
+      });
+    } else {
+      return res.status(404).json({ error: 'No agent running for this room' });
+    }
+
+  } catch (error) {
+    console.error('Failed to stop agent:', error);
+    return res.status(500).json({ error: String(error) });
+  }
+}
+
+function killAgent(roomName: string): boolean {
+  const process = runningAgents.get(roomName);
+  if (process) {
+    (process as any).kill?.();
+    runningAgents.delete(roomName);
+    return true;
+  }
+  return false;
+}
+
+export default { startAgent, stopAgent };

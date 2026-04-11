@@ -1,0 +1,37 @@
+/**
+ * ════════════════════════════════════════════════════════════════════════════════
+ * Core Video Chat Types & Configuration
+ * Pure video chat types — no feature-specific types here.
+ * ════════════════════════════════════════════════════════════════════════════════
+ */
+
+/* ─── Status ────────────────────────────────────────────────────────────── */
+export type Status =
+  | "init"
+  | "connecting"
+  | "looking"
+  | "connected"
+  | "error-camera"
+  | "error-peer";
+
+/* ─── Chat Message ──────────────────────────────────────────────────────── */
+export interface Message {
+  sender: "local" | "remote";
+  text: string;
+  time: Date;
+  _id?: number;
+}
+
+/* ─── Component Props ───────────────────────────────────────────────────── */
+export interface VideoChatPageProps {
+  onExit: () => void;
+  userEmail?: string;
+}
+
+/* ─── Configuration ────────────────────────────────────────────────────── */
+export const CONFIG = {
+  TOKEN_API_URL:
+    import.meta.env.VITE_LIVEKIT_TOKEN_API ||
+    "http://localhost:3001/api/livekit-token",
+  RETRY_DELAY: 2000,
+};

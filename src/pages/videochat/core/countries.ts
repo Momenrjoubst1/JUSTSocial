@@ -1,0 +1,23 @@
+export const COUNTRIES = [
+  { code: "", name: "Global" },
+  { code: "US", name: "United States (US)" },
+  { code: "GB", name: "United Kingdom (GB)" },
+  { code: "CA", name: "Canada (CA)" },
+  { code: "AU", name: "Australia (AU)" },
+  { code: "AE", name: "UAE (AE)" },
+  { code: "SA", name: "Saudi Arabia (SA)" },
+  { code: "JO", name: "Jordan (JO)" },
+  { code: "PS", name: "Palestine (PS)" },
+  { code: "EG", name: "Egypt (EG)" },
+  { code: "LB", name: "Lebanon (LB)" },
+  { code: "IR", name: "Iran (IR)" },
+  { code: "IQ", name: "Iraq (IQ)" },
+  { code: "MA", name: "Morocco (MA)" },
+  { code: "DZ", name: "Algeria (DZ)" },
+  { code: "TN", name: "Tunisia (TN)" },
+  { code: "TR", name: "Turkey (TR)" },
+  { code: "FR", name: "France (FR)" },
+  { code: "DE", name: "Germany (DE)" },
+  { code: "IN", name: "India (IN)" },
+  { code: "PK", name: "Pakistan (PK)" }
+];
