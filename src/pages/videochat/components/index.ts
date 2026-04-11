@@ -6,3 +6,5 @@ export { ControlBar } from './ControlBar';
 export { ChatInputBar } from './ChatInputBar';
 export { StatusBar } from './StatusBar';
 export { VideoCore } from './VideoCore';
+export { ChessWidget } from './ChessWidget';
+export { AIAgentWidget } from './AIAgentWidget';

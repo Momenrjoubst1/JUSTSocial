@@ -14,10 +14,10 @@ const WatchModeOverlay = lazy(() => import("@/features/watch-mode").then((module
 const AvatarScene = lazy(() => import("@/features/avatar").then((module) => ({ default: module.AvatarScene })));
 const InfiniteMenu = lazy(() => import("@/components/ui/navigation").then((module) => ({ default: module.InfiniteMenu })));
 const EnhancedIDE = lazy(() => import("@/features/code-editor").then((module) => ({ default: module.EnhancedIDE })));
-const ChessGame = lazy(() => import("@/features/chess").then((module) => ({ default: module.ChessGame })));
 const WhiteboardOverlay = lazy(() => import("@/features/whiteboard").then((module) => ({ default: module.WhiteboardOverlay })));
 
-export function VideoCore(state: UseVideoPageStateReturn) {
+export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: any }) {
+  const { chess, ai, ...coreState } = state;
   const {
     t,
     onExit,
@@ -69,12 +69,6 @@ export function VideoCore(state: UseVideoPageStateReturn) {
     peerInfoHovered,
     setPeerInfoHovered,
 
-    isChessMode,
-    chessPeerMove,
-    isWhiteChessPlayer,
-    sendMove,
-    openChess,
-    closeChess,
 
     isCodeMode,
     openCodeEditor,
@@ -104,13 +98,6 @@ export function VideoCore(state: UseVideoPageStateReturn) {
     setShowChatHistory,
     messagesEndRef,
 
-    agentActive,
-    agentLoading,
-    agentError,
-    startForRoom,
-    stopForRoom,
-    isStreaming,
-    agentMessage,
 
     chatInputOpen,
     setChatInputOpen,
@@ -125,7 +112,7 @@ export function VideoCore(state: UseVideoPageStateReturn) {
     handleSkip,
     handleExit,
     dotColor,
-  } = state;
+  } = coreState;
 
   return (
     <div style={styles.root}>
@@ -196,61 +183,6 @@ export function VideoCore(state: UseVideoPageStateReturn) {
         </div>
       )}
 
-      {agentError && (
-        <div
-          style={{
-            position: "fixed",
-            top: 24,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 9998,
-            background: "rgba(220,38,38,0.9)",
-            color: "#fff",
-            padding: "10px 24px",
-            borderRadius: 999,
-            fontSize: 13,
-            fontWeight: 600,
-            pointerEvents: "none",
-          }}
-        >
-          {agentError}
-        </div>
-      )}
-
-      {agentActive && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[30] w-full max-w-lg px-4 pointer-events-none">
-          <div className="bg-black/80 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex flex-col items-center text-center">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-white font-semibold text-sm">الذكاء الاصطناعي (Sigma)</span>
-              {isStreaming && (
-                <span className="flex h-2 w-2 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-              )}
-            </div>
-
-            {agentLoading && !agentMessage && (
-              <div className="flex space-x-1.5 items-center justify-center p-2" dir="ltr">
-                <div className="w-1.5 h-1.5 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <div className="w-1.5 h-1.5 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <div className="w-1.5 h-1.5 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-              </div>
-            )}
-
-            {agentMessage && <p className="text-white text-sm md:text-base leading-relaxed">{agentMessage}</p>}
-
-            <button
-              onClick={() => {
-                void stopForRoom(roomRef.current?.name);
-              }}
-              className="mt-4 pointer-events-auto bg-red-500/20 hover:bg-red-500/80 border border-red-500/50 text-red-100 hover:text-white text-xs px-4 py-1.5 rounded-full"
-            >
-              إيقاف المحادثة
-            </button>
-          </div>
-        </div>
-      )}
 
       {isWatchMode && (
         <Suspense fallback={null}>
@@ -364,18 +296,6 @@ export function VideoCore(state: UseVideoPageStateReturn) {
         </Suspense>
       )}
 
-      {isChessMode && (
-        <Suspense fallback={null}>
-          <ChessGame
-            isWhite={isWhiteChessPlayer}
-            peerMove={chessPeerMove}
-            onClose={closeChess}
-            onMove={sendMove}
-            localStream={localStreamRef.current}
-            remoteStream={(remoteVideoRef.current?.srcObject as MediaStream) ?? null}
-          />
-        </Suspense>
-      )}
 
       <div style={{ ...styles.videosContainer, ...(isWatchMode ? { position: "absolute", opacity: 0, pointerEvents: "none", zIndex: -10 } : {}) }}>
         <div style={styles.videoSection}>
@@ -595,13 +515,13 @@ export function VideoCore(state: UseVideoPageStateReturn) {
               cameraMuted={cameraMuted}
               handleToggleCamera={handleToggleCamera}
               screenShare={screenShare}
-              agentActive={agentActive}
-              agentLoading={agentLoading}
+              agentActive={ai?.isActive}
+              agentLoading={ai?.isLoading}
               startAgent={(room) => {
-                void startForRoom(room);
+                void ai?.startForRoom(room);
               }}
               stopAgent={(room) => {
-                void stopForRoom(room);
+                void ai?.stopForRoom(room);
               }}
               roomRef={roomRef}
               isWatchMode={isWatchMode}
@@ -614,9 +534,9 @@ export function VideoCore(state: UseVideoPageStateReturn) {
               isCodeMode={isCodeMode}
               openCodeEditor={openCodeEditor}
               closeCodeEditor={closeCodeEditor}
-              isChessMode={isChessMode}
-              openChess={openChess}
-              closeChess={closeChess}
+              isChessMode={chess?.isActive}
+              openChess={chess?.openChess}
+              closeChess={chess?.closeChess}
             />
 
             {screenShare.isScreenSharing && (

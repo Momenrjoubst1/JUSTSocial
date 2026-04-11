@@ -4,14 +4,17 @@ import { supabase } from "@/lib/supabaseClient";
 import {
   useVideoChat,
   useTextChat,
-  type VideoChatPageProps,
-  type UseTextChatReturn,
+  type VideoChatPageProps as BaseProps,
   type VideoSessionParticipant,
 } from "@/pages/videochat/core";
+
+export interface VideoChatPageProps extends BaseProps {
+  onExtraDataReceived?: (raw: any) => void;
+}
 import { useModeration, type UseModerationReturn } from "@/pages/videochat/core/useModeration";
 import { useCountryPreference } from "@/pages/videochat/core/useCountryPreference";
 import { COUNTRIES } from "@/pages/videochat/core/countries";
-import { useAIAgent, useChessGame, useCodeEditor, type ChessMove } from "@/pages/videochat/features";
+import { useCodeEditor } from "@/pages/videochat/features";
 import { useFingerprint } from "@/hooks/useFingerprint";
 import { useScreenShare } from "@/features/screen-share";
 import type { InfiniteMenuItem } from "@/components/ui/navigation";
@@ -31,20 +34,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function isChessMove(value: unknown): value is ChessMove {
-  if (!isRecord(value)) {
-    return false;
-  }
-  return typeof value.from === "string" && typeof value.to === "string";
-}
-
 function codeToEmoji(code: string): string {
   return code
     ? code.toUpperCase().replace(/./g, (char) => String.fromCodePoint(char.charCodeAt(0) + 127397))
     : "🌐";
 }
 
-export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps) {
+export function useVideoPageState(props: VideoChatPageProps) {
+  const { onExit, userEmail = "" } = props;
   const { t } = useLanguage();
   const userName = userEmail ? userEmail.split("@")[0] : String(t("videochat.you"));
   const deviceFingerprint = useFingerprint();
@@ -90,18 +87,6 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
   });
 
   const {
-    isActive: isChessMode,
-    peerMove: chessPeerMove,
-    isWhite: isWhiteChessPlayer,
-    sendMove,
-    openChess,
-    receiveOpen,
-    receiveMove,
-    reset: resetChess,
-    closeChess,
-  } = useChessGame((payload: object) => sendDataRef.current(payload));
-
-  const {
     isCodeMode,
     openCodeEditor,
     receiveCodeState,
@@ -110,7 +95,7 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
   } = useCodeEditor((payload: object) => sendDataRef.current(payload));
 
   const moderationRef = useRef<UseModerationReturn | null>(null);
-  const textChatRef = useRef<UseTextChatReturn | null>(null);
+  const textChatRef = useRef<any>(null);
 
   const watchSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userInfoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -133,7 +118,6 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
 
   const handleDataReceived = useCallback(async (raw: unknown, _participant: VideoSessionParticipant) => {
       try {
-
           if (!isRecord(raw) || typeof raw.type !== "string") {
             return;
           }
@@ -180,7 +164,7 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
                 action,
                 time: typeof raw.time === "number" ? raw.time : undefined,
                 videoId: typeof raw.videoId === "string" ? raw.videoId : undefined,
-              });
+              } as WatchSyncMessage);
               if (watchSyncTimerRef.current) {
                 clearTimeout(watchSyncTimerRef.current);
               }
@@ -191,18 +175,6 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
 
           if (raw.type === "code-open") {
             receiveCodeState(Boolean(raw.state));
-            return;
-          }
-
-          if (raw.type === "chess-open") {
-            receiveOpen();
-            return;
-          }
-
-          if (raw.type === "chess-move") {
-            if (isChessMove(raw.move)) {
-              receiveMove(raw.move);
-            }
             return;
           }
 
@@ -247,14 +219,19 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
             const moderationResult = await moderationRef.current?.moderateText(text);
             if (moderationResult && !moderationResult.safe && messageRecord) {
               messageRecord.text = "[Security: Message Hidden]";
+              (raw as any).message.text = "[Security: Message Hidden]";
             }
             textChatRef.current?.handleIncomingMessage(raw);
           }
+
+          if (props.onExtraDataReceived) {
+            props.onExtraDataReceived(raw);
+          }
         
       } catch (error) {
-        console.error('[useVideoPageState.ts] [anonymous_function]:', error);
+        console.error('[useVideoPageState.ts] handleDataReceived:', error);
       }
-  }, [receiveCodeState, receiveMove, receiveOpen]);
+  }, [receiveCodeState]);
 
   const videoChat = useVideoChat({
     onExit,
@@ -312,16 +289,6 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
     messagesEndRef,
   } = textChat;
 
-  const {
-    agentActive,
-    agentLoading,
-    agentError,
-    startForRoom,
-    stopForRoom,
-    isStreaming,
-    agentMessage,
-  } = useAIAgent();
-
   const [chatInputOpen, setChatInputOpen] = useState(false);
   const [notConnectedToast, setNotConnectedToast] = useState(false);
 
@@ -338,8 +305,6 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
   );
 
   const handleSendMessage = useCallback(async () => {
-      try {
-
           if (!connected) {
             if (notConnectedTimerRef.current) {
               clearTimeout(notConnectedTimerRef.current);
@@ -366,15 +331,9 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
           }
 
           sendMessage();
-        
-      } catch (error) {
-        console.error('[useVideoPageState.ts] [anonymous_function]:', error);
-      }
   }, [connected, messageInput, moderation, sendMessage]);
 
   const handleReportUser = useCallback(async () => {
-      try {
-
           if (!connected || !remotePeerIdentity) {
             return;
           }
@@ -407,10 +366,6 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
             clearTimeout(reportToastTimerRef.current);
           }
           reportToastTimerRef.current = setTimeout(() => setShowReportToast(false), 3000);
-        
-      } catch (error) {
-        console.error('[useVideoPageState.ts] [anonymous_function]:', error);
-      }
   }, [connected, moderation, remotePeerIdentity, remoteUserInfo, sendData, t]);
 
   const handleFollowRemote = useCallback(async () => {
@@ -456,21 +411,13 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
   const handleSkip = useCallback(() => {
     screenShare.cleanupScreenShare();
     clearMessages();
-    const roomName = roomRef.current?.name;
-    if (agentActive && roomName) {
-      stopForRoom(roomName);
-    }
     coreSkip();
-  }, [agentActive, clearMessages, coreSkip, roomRef, screenShare, stopForRoom]);
+  }, [clearMessages, coreSkip, screenShare]);
 
   const handleExit = useCallback(() => {
     screenShare.cleanupScreenShare();
-    const roomName = roomRef.current?.name;
-    if (agentActive && roomName) {
-      stopForRoom(roomName);
-    }
     coreExit();
-  }, [agentActive, coreExit, roomRef, screenShare, stopForRoom]);
+  }, [coreExit, screenShare]);
 
   const dotColor = status === "connected"
     ? "#22c55e"
@@ -478,9 +425,6 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
 
   useEffect(() => {
     sessionStorage.setItem("vc_watch_mode", isWatchMode.toString());
-    return () => {
-      // no-op cleanup to keep effect contract explicit
-    };
   }, [isWatchMode]);
 
   useEffect(() => {
@@ -489,9 +433,6 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
     } else {
       sessionStorage.removeItem("vc_watch_id");
     }
-    return () => {
-      // no-op cleanup to keep effect contract explicit
-    };
   }, [watchVideoIdFromPeer]);
 
   useEffect(() => {
@@ -517,20 +458,12 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
       }
     }
     prevMsgCountRef.current = messages.length;
-
-    return () => {
-      // no-op cleanup to keep effect contract explicit
-    };
   }, [chatInputOpen, messages]);
 
   useEffect(() => {
     if (showChatHistory || chatInputOpen) {
       setUnreadCount(0);
     }
-
-    return () => {
-      // no-op cleanup to keep effect contract explicit
-    };
   }, [chatInputOpen, showChatHistory]);
 
   const prevConnectedRef = useRef(false);
@@ -543,13 +476,10 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
       setWatchCloseRequestPending(false);
       setIsWhiteboardMode(false);
       resetCodeEditor();
-      resetChess();
       prevConnectedRef.current = false;
       hasSentInfoRef.current = false;
       hasRepliedInfoRef.current = false;
-      return () => {
-        // no-op cleanup to keep effect contract explicit
-      };
+      return;
     }
 
     const isNewConnection = !prevConnectedRef.current;
@@ -580,20 +510,14 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
       clearTimeout(timerA);
       clearTimeout(timerB);
     };
-  }, [clearMessages, connected, resetChess, resetCodeEditor, sendData]);
+  }, [clearMessages, connected, resetCodeEditor, sendData]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    return () => {
-      // no-op cleanup to keep effect contract explicit
-    };
   }, [messages, messagesEndRef]);
 
   useEffect(() => {
     localUserInfoRef.current = localUserInfo;
-    return () => {
-      // no-op cleanup to keep effect contract explicit
-    };
   }, [localUserInfo]);
 
   useEffect(() => {
@@ -602,9 +526,7 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
     const fetchLocalInfo = async () => {
       try {
         const { data: auth } = await supabase.auth.getUser();
-        if (!active) {
-          return;
-        }
+        if (!active) return;
 
         let name = "Guest";
         let avatar: string | null = null;
@@ -617,17 +539,11 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
             .eq("id", user.id)
             .maybeSingle();
 
-          if (!active) {
-            return;
+          if (!active) return;
+          if (profile) {
+            name = profile.full_name || profile.username || user.email?.split("@")[0] || "Guest";
+            avatar = profile.avatar_url;
           }
-
-          const profileRecord = isRecord(profile) ? profile : null;
-          const fullName = profileRecord && typeof profileRecord.full_name === "string" ? profileRecord.full_name : null;
-          const username = profileRecord && typeof profileRecord.username === "string" ? profileRecord.username : null;
-          const avatarUrl = profileRecord && typeof profileRecord.avatar_url === "string" ? profileRecord.avatar_url : null;
-
-          name = fullName || username || user.email?.split("@")[0] || "Guest";
-          avatar = avatarUrl;
         }
 
         const flag = codeToEmoji(myCountry);
@@ -651,64 +567,47 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
       fetchLocalInfo();
     }
 
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [countryLoading, deviceFingerprint, myCountry]);
 
   useEffect(() => {
     if (!remoteUserInfo?.userId || !localUserInfo?.userId) {
       setIsFollowingRemote(false);
-      return () => {
-        // no-op cleanup to keep effect contract explicit
-      };
+      return;
     }
 
     let active = true;
-
     const checkFollow = async () => {
         try {
+            const { data } = await supabase
+              .from("follows")
+              .select("follower_id")
+              .eq("follower_id", localUserInfo.userId)
+              .eq("following_id", remoteUserInfo.userId)
+              .maybeSingle();
 
-              const { data } = await supabase
-                .from("follows")
-                .select("follower_id")
-                .eq("follower_id", localUserInfo.userId)
-                .eq("following_id", remoteUserInfo.userId)
-                .maybeSingle();
-
-              if (active) {
-                setIsFollowingRemote(Boolean(data));
-              }
-            
+            if (active) {
+              setIsFollowingRemote(Boolean(data));
+            }
         } catch (error) {
-          console.error('[useVideoPageState.ts] [checkFollow]:', error);
+          console.error('checkFollow error:', error);
         }
     };
-
     checkFollow();
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [localUserInfo?.userId, remoteUserInfo?.userId]);
 
   useEffect(() => {
-    if (!showFeaturePanel) {
-      return () => {
-        // no-op cleanup to keep effect contract explicit
-      };
-    }
+    if (!showFeaturePanel) return;
 
-    const handler = (event: MouseEvent) => {
+    const handler = (event: PointerEvent) => {
       if (featurePanelRef.current && !featurePanelRef.current.contains(event.target as Node)) {
         setShowFeaturePanel(false);
       }
     };
 
     document.addEventListener("pointerdown", handler);
-    return () => {
-      document.removeEventListener("pointerdown", handler);
-    };
+    return () => document.removeEventListener("pointerdown", handler);
   }, [showFeaturePanel]);
 
   useEffect(() => {
@@ -779,13 +678,6 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
     peerInfoHovered,
     setPeerInfoHovered,
 
-    isChessMode,
-    chessPeerMove,
-    isWhiteChessPlayer,
-    sendMove,
-    openChess,
-    closeChess,
-
     isCodeMode,
     openCodeEditor,
     closeCodeEditor,
@@ -813,14 +705,6 @@ export function useVideoPageState({ onExit, userEmail = "" }: VideoChatPageProps
     showChatHistory,
     setShowChatHistory,
     messagesEndRef,
-
-    agentActive,
-    agentLoading,
-    agentError,
-    startForRoom,
-    stopForRoom,
-    isStreaming,
-    agentMessage,
 
     chatInputOpen,
     setChatInputOpen,
