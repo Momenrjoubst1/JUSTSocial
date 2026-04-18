@@ -186,8 +186,10 @@ export function App() {
 
         if (event === "SIGNED_IN") {
           const authProvider = localStorage.getItem('auth_provider');
+          const hasShownWelcome = sessionStorage.getItem('welcomeShown');
 
-          if (authProvider === 'google') {
+          if (authProvider === 'google' && !hasShownWelcome) {
+            sessionStorage.setItem('welcomeShown', 'true');
             // Because Google OAuth redirects the page, onLoginSuccess callback isn't fired.
             // We must trigger the welcome screen here!
             supabase
