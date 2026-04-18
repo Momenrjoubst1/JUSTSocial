@@ -11,26 +11,130 @@ import React from "react";
 import type { VideoChatPageProps } from "@/pages/videochat/core";
 import { VideoCore, ChessWidget, AIAgentWidget } from "./components";
 import { useVideoPageState, useChessGame, useAIAgent } from "./hooks";
+import { elevenLabsTTS } from "@/services/elevenlabs-tts";
 
 export default function VideoChatPage(props: VideoChatPageProps) {
+  const [aiBubbles, setAiBubbles] = React.useState<{id: string; text: string; done?: boolean; createdAt?: number}[]>([]);
+  const [userBubbles, setUserBubbles] = React.useState<{id: string; text: string; done: boolean; createdAt?: number}[]>([]);
+
+  // Track which AI bubbles have already been spoken to avoid duplicates
+  const spokenBubblesRef = React.useRef<Set<string>>(new Set());
+
+  // 2. AI Hook (Defined first so we can use its state in Video Hook)
+  const ai = useAIAgent();
+
+  // Stop TTS only if explicitly needed, but let existing audio finish
+  React.useEffect(() => {
+    if (!ai.isActive) {
+      // We no longer call elevenLabsTTS.stop() here so last messages can finish
+      spokenBubblesRef.current.clear();
+    }
+  }, [ai.isActive]);
+
+  // Sync agent status with backend on mount or when roomName changes
+  React.useEffect(() => {
+    if (props.roomName) {
+      ai.syncStatus(props.roomName);
+    }
+  }, [props.roomName, ai.syncStatus]);
+
   // 1. Core Video Hook (with multicast data listener)
   const video = useVideoPageState({
     ...props,
+    aiActive: ai.isActive,
     onExtraDataReceived: (raw) => {
-      chess.handleChessMessage(raw);
+      // Only process AI messages if the AI agent is active for this user
+      if ((raw.type === "ai_msg" || raw.type === "ai_msg_stream") && !ai.isActive) {
+        return;
+      }
+      
+      if (raw.type === "ai_msg") {
+        const id = Math.random().toString(36).substring(7);
+        setAiBubbles((prev) => [...prev, { id, text: raw.message?.text || "", done: true, createdAt: Date.now() }].slice(-50));
+      } else if (raw.type === "ai_msg_stream") {
+        const streamId = raw.stream_id;
+        const text = raw.text || "";
+        const isFinal = raw.is_final;
+
+        if (!isFinal) {
+          ai.setIsStreaming(true);
+        }
+
+        setAiBubbles((prev) => {
+          const index = prev.findIndex((b) => b.id === streamId);
+          if (isFinal) {
+            // Mark as done (hide cursor)
+            if (index !== -1) {
+              const updated = [...prev];
+              updated[index] = { ...updated[index], done: true };
+              return updated;
+            }
+            return prev;
+          }
+          if (index === -1) {
+            // New bubble
+            return [...prev, { id: streamId, text: text, done: false, createdAt: Date.now() }].slice(-50);
+          } else {
+            // Append to existing bubble
+            const updated = [...prev];
+            updated[index] = { ...updated[index], text: updated[index].text + text };
+            return updated;
+          }
+        });
+
+        if (isFinal) {
+          ai.setIsStreaming(false);
+          // 🔊 Speak the completed AI reply via ElevenLabs TTS
+          setAiBubbles((currentBubbles) => {
+            const bubble = currentBubbles.find((b) => b.id === streamId);
+            if (bubble && bubble.text && !spokenBubblesRef.current.has(streamId)) {
+              spokenBubblesRef.current.add(streamId);
+              elevenLabsTTS.speak(bubble.text).catch((e) =>
+                console.error("[TTS] Speech failed:", e)
+              );
+            }
+            return currentBubbles; // no mutation, read-only access
+          });
+        }
+      } else if (raw.type === "user_msg_stream") {
+        const streamId = raw.stream_id || "user_live";
+        const text = raw.text || "";
+        const isFinal = raw.is_final;
+
+        setUserBubbles((prev) => {
+          const index = prev.findIndex((b) => b.id === streamId);
+          if (isFinal) {
+            if (index !== -1) {
+              const updated = [...prev];
+              updated[index] = { ...updated[index], text, done: true };
+              return updated;
+            }
+            return [...prev, { id: streamId, text: text, done: true, createdAt: Date.now() }].slice(-50);
+          }
+          
+          if (index === -1) {
+            return [...prev, { id: streamId, text: text, done: false, createdAt: Date.now() }].slice(-50);
+          } else {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], text: text };
+            return updated;
+          }
+        });
+      } else if (raw.type === "user_msg") {
+        // Disabled: Rely on user_msg_stream is_final=true to prevent duplication
+      } else {
+        chess.handleChessMessage(raw);
+      }
     },
   });
-
-  // 2. AI Hook
-  const ai = useAIAgent();
 
   // 3. Chess Hook
   const chess = useChessGame((data) => video.sendData(data));
 
   return (
     <>
-      <VideoCore {...video} chess={chess} ai={ai} />
-      
+      <VideoCore {...video} chess={chess} ai={{...ai, isStreaming: aiBubbles.some(b => !b.done)}} aiBubbles={aiBubbles} userBubbles={userBubbles} />
+
       {/* Chess Widget Component */}
       <ChessWidget
         {...chess}
@@ -38,15 +142,6 @@ export default function VideoChatPage(props: VideoChatPageProps) {
         onMove={chess.sendMove}
         localStream={video.localStreamRef.current}
         remoteStream={(video.remoteVideoRef.current?.srcObject as MediaStream) ?? null}
-      />
-
-      {/* AI Agent Widget Component */}
-      <AIAgentWidget
-        {...ai}
-        message={ai.agentMessage}
-        onStop={() => {
-          void ai.stopForRoom(video.roomRef.current?.name);
-        }}
       />
     </>
   );

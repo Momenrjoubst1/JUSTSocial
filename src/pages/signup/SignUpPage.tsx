@@ -33,13 +33,14 @@ export default function SignUpPage({
   const { setBaseTitle } = useTitle();
 
   useEffect(() => {
-    setBaseTitle('Sign Up • SkillSwap');
+    setBaseTitle('Sign Up • JUST Social');
   }, [setBaseTitle]);
 
   const handleGoogleSignUp = async () => {
     setIsLoading(true);
     setError("");
     try {
+      localStorage.setItem('auth_provider', 'google');
       await signInWithGoogle();
     } catch (err: any) {
       setError(err.message || "An error occurred during Google sign up");
@@ -51,6 +52,7 @@ export default function SignUpPage({
     setIsLoading(true);
     setError("");
     try {
+      localStorage.setItem('auth_provider', 'facebook');
       await signInWithFacebook();
     } catch (err: any) {
       setError(err.message || "An error occurred during Facebook sign up");
@@ -181,7 +183,7 @@ export default function SignUpPage({
           <div>
             <h2 className="text-xl font-bold text-foreground">Create Account</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Join SkillSwap and start swapping
+              Join JUST Social and start connecting
             </p>
           </div>
           {onClose && (
@@ -200,9 +202,8 @@ export default function SignUpPage({
             Full Name
           </Label>
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-300" />
-            <div className="relative flex items-center gap-3 bg-input rounded-lg px-4 h-12 w-full border border-border group-hover:border-ring/50 transition-colors">
-              <User className="h-4 w-4 text-emerald-400/70 shrink-0" />
+            <div className="relative flex items-center gap-3 bg-[#161616] rounded-lg px-4 h-12 w-full border border-[#262626] group-hover:border-[#3a3a3a] transition-colors">
+              <User className="h-4 w-4 text-[#A1A1A1] shrink-0" />
               <input
                 id="fullname"
                 type="text"
@@ -222,9 +223,8 @@ export default function SignUpPage({
             Username
           </Label>
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-300" />
-            <div className="relative flex items-center gap-3 bg-input rounded-lg px-4 h-12 w-full border border-border group-hover:border-ring/50 transition-colors">
-              <span className="text-primary-foreground/70 shrink-0 font-bold select-none">@</span>
+            <div className="relative flex items-center gap-3 bg-[#161616] rounded-lg px-4 h-12 w-full border border-[#262626] group-hover:border-[#3a3a3a] transition-colors">
+              <span className="text-[#A1A1A1] shrink-0 font-bold select-none">@</span>
               <input
                 id="username"
                 type="text"
@@ -244,9 +244,8 @@ export default function SignUpPage({
             Email Address
           </Label>
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-300" />
-            <div className="relative flex items-center gap-3 bg-input rounded-lg px-4 h-12 w-full border border-border group-hover:border-ring/50 transition-colors">
-              <Mail className="h-4 w-4 text-blue-400/70 shrink-0" />
+            <div className="relative flex items-center gap-3 bg-[#161616] rounded-lg px-4 h-12 w-full border border-[#262626] group-hover:border-[#3a3a3a] transition-colors">
+              <Mail className="h-4 w-4 text-[#A1A1A1] shrink-0" />
               <input
                 id="signup-email"
                 type="email"
@@ -266,9 +265,8 @@ export default function SignUpPage({
             Password
           </Label>
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-300" />
-            <div className="relative flex items-center gap-3 bg-input rounded-lg px-4 h-12 w-full border border-border group-hover:border-ring/50 transition-colors">
-              <Lock className="h-4 w-4 text-purple-400/70 shrink-0" />
+            <div className="relative flex items-center gap-3 bg-[#161616] rounded-lg px-4 h-12 w-full border border-[#262626] group-hover:border-[#3a3a3a] transition-colors">
+              <Lock className="h-4 w-4 text-[#A1A1A1] shrink-0" />
               <input
                 id="signup-password"
                 type="password"
@@ -293,9 +291,8 @@ export default function SignUpPage({
             Confirm Password
           </Label>
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 to-orange-500 rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-300" />
-            <div className="relative flex items-center gap-3 bg-input rounded-lg px-4 h-12 w-full border border-border group-hover:border-ring/50 transition-colors">
-              <Lock className="h-4 w-4 text-pink-400/70 shrink-0" />
+            <div className="relative flex items-center gap-3 bg-[#161616] rounded-lg px-4 h-12 w-full border border-[#262626] group-hover:border-[#3a3a3a] transition-colors">
+              <Lock className="h-4 w-4 text-[#A1A1A1] shrink-0" />
               <input
                 id="confirm-password"
                 type="password"
@@ -321,18 +318,18 @@ export default function SignUpPage({
             checked={agreeTerms}
             onCheckedChange={(checked) => setAgreeTerms(checked as boolean)}
             disabled={isLoading}
-            className="border-border mt-0.5 data-[state=checked]:bg-primary data-[state=checked]:border-blue-500"
+            className="border-[#262626] mt-0.5 data-[state=checked]:bg-[#FFFFFF] data-[state=checked]:border-[#FFFFFF]"
           />
           <Label
             htmlFor="terms"
             className="text-sm font-normal text-muted-foreground cursor-pointer leading-relaxed"
           >
             I agree to the{" "}
-            <span className="text-blue-400 hover:text-blue-300 hover:underline cursor-pointer transition-colors">
+            <span className="text-[#FFFFFF] hover:underline cursor-pointer transition-colors">
               Terms of Service
             </span>{" "}
             and{" "}
-            <span className="text-blue-400 hover:text-blue-300 hover:underline cursor-pointer transition-colors">
+            <span className="text-[#FFFFFF] hover:underline cursor-pointer transition-colors">
               Privacy Policy
             </span>
           </Label>
@@ -356,7 +353,7 @@ export default function SignUpPage({
         <button
           onClick={handleSubmit}
           disabled={isLoading}
-          className="w-full h-12 text-base font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-[0_0_20px_rgba(59,130,246,0.4)]"
+          className="w-full h-12 text-base font-semibold rounded-xl bg-[#FFFFFF] text-[#0A0A0A] hover:bg-[#E2E2E2] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
         >
           {isLoading ? "Creating account..." : "Create Account"}
         </button>
@@ -404,11 +401,11 @@ export default function SignUpPage({
         </div>
 
         {/* Sign in link */}
-        <p className="text-center text-sm text-muted-foreground/50 mt-1">
+        <p className="text-center text-sm text-[#525252] mt-1">
           Already have an account?{" "}
           <span
             onClick={onSwitchToSignIn}
-            className="text-blue-400 cursor-pointer hover:text-blue-300 hover:underline font-medium transition-colors"
+            className="text-[#FFFFFF] cursor-pointer hover:underline font-medium transition-colors"
           >
             Sign In
           </span>

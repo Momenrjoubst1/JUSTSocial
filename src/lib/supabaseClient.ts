@@ -65,6 +65,7 @@ export async function getCurrentUser() {
 
     } catch (error) {
       console.error('[supabaseClient.ts] [getCurrentUser]:', error);
+      return null;
     }
 }
 
@@ -120,14 +121,8 @@ export function onAuthStateChange(
  * }
  */
 export async function signInWithEmail(email: string, password: string) {
-    try {
-
-      localStorage.setItem('auth_provider', 'email');
-      return supabase.auth.signInWithPassword({ email, password });
-
-    } catch (error) {
-      console.error('[supabaseClient.ts] [signInWithEmail]:', error);
-    }
+    localStorage.setItem('auth_provider', 'email');
+    return supabase.auth.signInWithPassword({ email, password });
 }
 
 /**
@@ -148,14 +143,8 @@ export async function signInWithEmail(email: string, password: string) {
  * }
  */
 export async function signUpWithEmail(email: string, password: string) {
-    try {
-
-      localStorage.setItem('auth_provider', 'email');
-      return supabase.auth.signUp({ email, password });
-
-    } catch (error) {
-      console.error('[supabaseClient.ts] [signUpWithEmail]:', error);
-    }
+    localStorage.setItem('auth_provider', 'email');
+    return supabase.auth.signUp({ email, password });
 }
 
 /**
@@ -221,14 +210,8 @@ export async function signInWithFacebook() {
  * }
  */
 export async function signOut() {
-    try {
-
-      localStorage.removeItem('auth_provider');
-      return supabase.auth.signOut();
-
-    } catch (error) {
-      console.error('[supabaseClient.ts] [signOut]:', error);
-    }
+    localStorage.removeItem('auth_provider');
+    return supabase.auth.signOut();
 }
 
 /**
@@ -300,16 +283,10 @@ export async function uploadImageToStorage(dataUrl: string, userId: string, type
  * @returns {Promise<Object>} Update response
  */
 export async function saveUserProfileImage(userId: string, imageUrl: string) {
-    try {
-
-      return supabase
-        .from("users")
-        .update({ avatar_url: imageUrl })
-        .eq("id", userId);
-
-    } catch (error) {
-      console.error('[supabaseClient.ts] [saveUserProfileImage]:', error);
-    }
+    return supabase
+      .from("users")
+      .update({ avatar_url: imageUrl })
+      .eq("id", userId);
 }
 
 /**
@@ -347,15 +324,9 @@ export async function getUserProfileImage(userId: string) {
  * @returns {Promise<Object>} Update response
  */
 export async function saveUserCoverImage(userId: string, imageUrl: string) {
-    try {
-
-      return supabase
-        .from("users")
-        .update({ cover_url: imageUrl })
-        .eq("id", userId);
-
-    } catch (error) {
-      console.error('[supabaseClient.ts] [saveUserCoverImage]:', error);
-    }
+    return supabase
+      .from("users")
+      .update({ cover_url: imageUrl })
+      .eq("id", userId);
 }
 

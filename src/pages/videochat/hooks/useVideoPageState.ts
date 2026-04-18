@@ -10,6 +10,7 @@ import {
 
 export interface VideoChatPageProps extends BaseProps {
   onExtraDataReceived?: (raw: any) => void;
+  aiActive?: boolean;
 }
 import { useModeration, type UseModerationReturn } from "@/pages/videochat/core/useModeration";
 import { useCountryPreference } from "@/pages/videochat/core/useCountryPreference";
@@ -85,6 +86,8 @@ export function useVideoPageState(props: VideoChatPageProps) {
   const sendDataRef = useRef<(data: object) => void>(() => {
     // no-op until useVideoChat initializes
   });
+  const onExtraDataReceivedRef = useRef<((raw: any) => void) | undefined>(undefined);
+  const moderationCallbackRef = useRef<UseModerationReturn | null>(null);
 
   const {
     isCodeMode,
@@ -95,6 +98,7 @@ export function useVideoPageState(props: VideoChatPageProps) {
   } = useCodeEditor((payload: object) => sendDataRef.current(payload));
 
   const moderationRef = useRef<UseModerationReturn | null>(null);
+  const roomNameRef = useRef<string | null>(null);
   const textChatRef = useRef<any>(null);
 
   const watchSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -117,120 +121,120 @@ export function useVideoPageState(props: VideoChatPageProps) {
   }, []);
 
   const handleDataReceived = useCallback(async (raw: unknown, _participant: VideoSessionParticipant) => {
-      try {
-          if (!isRecord(raw) || typeof raw.type !== "string") {
-            return;
-          }
-
-          if (raw.type === "watch" && typeof raw.videoId === "string") {
-            setWatchVideoIdFromPeer(raw.videoId);
-            setIsWatchMode(true);
-            return;
-          }
-
-          if (raw.type === "watch-request") {
-            setWatchRequestPending(true);
-            return;
-          }
-
-          if (raw.type === "watch-accept") {
-            setIsWatchMode(true);
-            setWatchRequestSent(false);
-            return;
-          }
-
-          if (raw.type === "watch-decline") {
-            setWatchRequestSent(false);
-            return;
-          }
-
-          if (raw.type === "watch-exit-request") {
-            setWatchCloseRequestPending(true);
-            return;
-          }
-
-          if (raw.type === "watch-exit-confirm") {
-            setIsWatchMode(false);
-            setWatchVideoIdFromPeer(null);
-            sessionStorage.removeItem("vc_watch_mode");
-            sessionStorage.removeItem("vc_watch_id");
-            return;
-          }
-
-          if (raw.type === "watch-sync") {
-            const action = raw.action;
-            if (action === "play" || action === "pause" || action === "seek" || action === "watch") {
-              setWatchSyncMessage({
-                action,
-                time: typeof raw.time === "number" ? raw.time : undefined,
-                videoId: typeof raw.videoId === "string" ? raw.videoId : undefined,
-              } as WatchSyncMessage);
-              if (watchSyncTimerRef.current) {
-                clearTimeout(watchSyncTimerRef.current);
-              }
-              watchSyncTimerRef.current = setTimeout(() => setWatchSyncMessage(null), 100);
-            }
-            return;
-          }
-
-          if (raw.type === "code-open") {
-            receiveCodeState(Boolean(raw.state));
-            return;
-          }
-
-          if (raw.type === "user_info") {
-            setRemoteUserInfo({
-              name: typeof raw.name === "string" ? raw.name : "Guest",
-              country: typeof raw.country === "string" ? raw.country : "World",
-              flag: typeof raw.flag === "string" ? raw.flag : "🌐",
-              countryCode: typeof raw.countryCode === "string" ? raw.countryCode : "",
-              avatar: typeof raw.avatar === "string" ? raw.avatar : null,
-              userId: typeof raw.userId === "string" ? raw.userId : "",
-              fingerprint: typeof raw.fingerprint === "string" ? raw.fingerprint : null,
-            });
-
-            if (localUserInfoRef.current && !hasRepliedInfoRef.current) {
-              hasRepliedInfoRef.current = true;
-              if (userInfoTimerRef.current) {
-                clearTimeout(userInfoTimerRef.current);
-              }
-              userInfoTimerRef.current = setTimeout(() => {
-                const local = localUserInfoRef.current;
-                if (local) {
-                  sendDataRef.current({ type: "user_info", ...local });
-                  hasSentInfoRef.current = true;
-                }
-              }, 150);
-            }
-            return;
-          }
-
-          if (raw.type === "banned_kick") {
-            moderationRef.current?.onBanned?.({
-              banned: true,
-              reason: "Banned for guidelines violation.",
-            });
-            return;
-          }
-
-          if (raw.type === "msg") {
-            const messageRecord = isRecord(raw.message) ? raw.message : null;
-            const text = messageRecord && typeof messageRecord.text === "string" ? messageRecord.text : "";
-            const moderationResult = await moderationRef.current?.moderateText(text);
-            if (moderationResult && !moderationResult.safe && messageRecord) {
-              messageRecord.text = "[Security: Message Hidden]";
-              (raw as any).message.text = "[Security: Message Hidden]";
-            }
-            textChatRef.current?.handleIncomingMessage(raw);
-          }
-
-          if (props.onExtraDataReceived) {
-            props.onExtraDataReceived(raw);
-          }
-        
-      } catch (error) {
-        console.error('[useVideoPageState.ts] handleDataReceived:', error);
+    try {
+      if (!isRecord(raw) || typeof raw.type !== "string") {
+        return;
       }
+
+      if (raw.type === "watch" && typeof raw.videoId === "string") {
+        setWatchVideoIdFromPeer(raw.videoId);
+        setIsWatchMode(true);
+        return;
+      }
+
+      if (raw.type === "watch-request") {
+        setWatchRequestPending(true);
+        return;
+      }
+
+      if (raw.type === "watch-accept") {
+        setIsWatchMode(true);
+        setWatchRequestSent(false);
+        return;
+      }
+
+      if (raw.type === "watch-decline") {
+        setWatchRequestSent(false);
+        return;
+      }
+
+      if (raw.type === "watch-exit-request") {
+        setWatchCloseRequestPending(true);
+        return;
+      }
+
+      if (raw.type === "watch-exit-confirm") {
+        setIsWatchMode(false);
+        setWatchVideoIdFromPeer(null);
+        sessionStorage.removeItem("vc_watch_mode");
+        sessionStorage.removeItem("vc_watch_id");
+        return;
+      }
+
+      if (raw.type === "watch-sync") {
+        const action = raw.action;
+        if (action === "play" || action === "pause" || action === "seek" || action === "watch") {
+          setWatchSyncMessage({
+            action,
+            time: typeof raw.time === "number" ? raw.time : undefined,
+            videoId: typeof raw.videoId === "string" ? raw.videoId : undefined,
+          } as WatchSyncMessage);
+          if (watchSyncTimerRef.current) {
+            clearTimeout(watchSyncTimerRef.current);
+          }
+          watchSyncTimerRef.current = setTimeout(() => setWatchSyncMessage(null), 100);
+        }
+        return;
+      }
+
+      if (raw.type === "code-open") {
+        receiveCodeState(Boolean(raw.state));
+        return;
+      }
+
+      if (raw.type === "user_info") {
+        setRemoteUserInfo({
+          name: typeof raw.name === "string" ? raw.name : "Guest",
+          country: typeof raw.country === "string" ? raw.country : "World",
+          flag: typeof raw.flag === "string" ? raw.flag : "🌐",
+          countryCode: typeof raw.countryCode === "string" ? raw.countryCode : "",
+          avatar: typeof raw.avatar === "string" ? raw.avatar : null,
+          userId: typeof raw.userId === "string" ? raw.userId : "",
+          fingerprint: typeof raw.fingerprint === "string" ? raw.fingerprint : null,
+        });
+
+        if (localUserInfoRef.current && !hasRepliedInfoRef.current) {
+          hasRepliedInfoRef.current = true;
+          if (userInfoTimerRef.current) {
+            clearTimeout(userInfoTimerRef.current);
+          }
+          userInfoTimerRef.current = setTimeout(() => {
+            const local = localUserInfoRef.current;
+            if (local) {
+              sendDataRef.current({ type: "user_info", ...local });
+              hasSentInfoRef.current = true;
+            }
+          }, 150);
+        }
+        return;
+      }
+
+      if (raw.type === "banned_kick") {
+        moderationRef.current?.onBanned?.({
+          banned: true,
+          reason: "Banned for guidelines violation.",
+        });
+        return;
+      }
+
+      if (raw.type === "msg") {
+        const messageRecord = isRecord(raw.message) ? raw.message : null;
+        const text = messageRecord && typeof messageRecord.text === "string" ? messageRecord.text : "";
+        const moderationResult = await moderationRef.current?.moderateText(text);
+        if (moderationResult && !moderationResult.safe && messageRecord) {
+          messageRecord.text = "[Security: Message Hidden]";
+          (raw as any).message.text = "[Security: Message Hidden]";
+        }
+        textChatRef.current?.handleIncomingMessage(raw);
+      }
+
+      if (onExtraDataReceivedRef.current) {
+        onExtraDataReceivedRef.current(raw);
+      }
+
+    } catch (error) {
+      console.error('[useVideoPageState.ts] handleDataReceived:', error);
+    }
   }, [receiveCodeState]);
 
   const videoChat = useVideoChat({
@@ -238,6 +242,7 @@ export function useVideoPageState(props: VideoChatPageProps) {
     onDataReceived: handleDataReceived,
     countryPreference: myCountry,
     readyToConnect: !countryLoading,
+    aiActive: props.aiActive,
   });
 
   const {
@@ -245,6 +250,7 @@ export function useVideoPageState(props: VideoChatPageProps) {
     statusMessage,
     connected,
     cameraMuted,
+    audioMuted,
     remoteCameraMuted,
     isSearching,
     remotePeerIdentity,
@@ -255,17 +261,22 @@ export function useVideoPageState(props: VideoChatPageProps) {
     sendData,
     handleSkip: coreSkip,
     handleToggleCamera,
+    handleToggleAudio,
+    handleToggleSearch,
     handleExit: coreExit,
+    handleVolumeChange,
     audioEls,
   } = videoChat;
 
   sendDataRef.current = sendData;
+  onExtraDataReceivedRef.current = props.onExtraDataReceived;
+  roomNameRef.current = roomRef.current?.name || null;
 
   const moderation = useModeration({
     fingerprint: deviceFingerprint,
     userId: localUserInfo?.userId || null,
     identity: remotePeerIdentity,
-    roomName: roomRef.current?.name || null,
+    roomName: roomNameRef.current,
     connected,
     remoteVideoRef,
     onBanned: () => {
@@ -273,6 +284,7 @@ export function useVideoPageState(props: VideoChatPageProps) {
     },
   });
   moderationRef.current = moderation;
+  moderationCallbackRef.current = moderation;
 
   const textChat = useTextChat(sendData);
   textChatRef.current = textChat;
@@ -305,68 +317,73 @@ export function useVideoPageState(props: VideoChatPageProps) {
   );
 
   const handleSendMessage = useCallback(async () => {
-          if (!connected) {
-            if (notConnectedTimerRef.current) {
-              clearTimeout(notConnectedTimerRef.current);
-            }
-            setNotConnectedToast(true);
-            notConnectedTimerRef.current = setTimeout(() => setNotConnectedToast(false), 2500);
-            return;
-          }
+    if (!connected) {
+      if (notConnectedTimerRef.current) {
+        clearTimeout(notConnectedTimerRef.current);
+      }
+      setNotConnectedToast(true);
+      notConnectedTimerRef.current = setTimeout(() => setNotConnectedToast(false), 2500);
+      return;
+    }
 
-          const text = messageInput.trim();
-          if (!text) {
-            return;
-          }
+    const text = messageInput.trim();
+    if (!text) {
+      return;
+    }
 
-          const check = await moderation.moderateText(text);
-          if (!check.safe) {
-            setReportToastMsg(`Security Block: ${check.reason || "content violation"}`);
-            setShowReportToast(true);
-            if (reportToastTimerRef.current) {
-              clearTimeout(reportToastTimerRef.current);
-            }
-            reportToastTimerRef.current = setTimeout(() => setShowReportToast(false), 3000);
-            return;
-          }
+    const mod = moderationCallbackRef.current;
+    if (!mod) return;
+    const check = await mod.moderateText(text);
+    if (!check.safe) {
+      setReportToastMsg(`Security Block: ${check.reason || "content violation"}`);
+      setShowReportToast(true);
+      if (reportToastTimerRef.current) {
+        clearTimeout(reportToastTimerRef.current);
+      }
+      reportToastTimerRef.current = setTimeout(() => setShowReportToast(false), 3000);
+      return;
+    }
 
-          sendMessage();
-  }, [connected, messageInput, moderation, sendMessage]);
+    sendMessage();
+  }, [connected, messageInput, sendMessage]);
 
   const handleReportUser = useCallback(async () => {
-          if (!connected || !remotePeerIdentity) {
-            return;
-          }
+    if (!connected || !remotePeerIdentity) {
+      return;
+    }
 
-          const result = await moderation.reportUser({
-            reportedIdentity: remotePeerIdentity,
-            reportedFingerprint: remoteUserInfo?.fingerprint || undefined,
-            reportedUserId: remoteUserInfo?.userId || undefined,
-            reason: "inappropriate_content",
-          });
+    const mod = moderationCallbackRef.current;
+    if (!mod) return;
 
-          if (!result.ok) {
-            return;
-          }
+    const result = await mod.reportUser({
+      reportedIdentity: remotePeerIdentity,
+      reportedFingerprint: remoteUserInfo?.fingerprint || undefined,
+      reportedUserId: remoteUserInfo?.userId || undefined,
+      reason: "inappropriate_content",
+    });
 
-          if (result.autoBanned) {
-            sendData({ type: "banned_kick" });
-            setReportToastMsg("User has been permanently banned");
-            if (reportToastTimerRef.current) {
-              clearTimeout(reportToastTimerRef.current);
-            }
-            setShowReportToast(true);
-            reportToastTimerRef.current = setTimeout(() => setShowReportToast(false), 3000);
-            return;
-          }
+    if (!result.ok) {
+      return;
+    }
 
-          setReportToastMsg(String(t("videochat.report.success")));
-          setShowReportToast(true);
-          if (reportToastTimerRef.current) {
-            clearTimeout(reportToastTimerRef.current);
-          }
-          reportToastTimerRef.current = setTimeout(() => setShowReportToast(false), 3000);
-  }, [connected, moderation, remotePeerIdentity, remoteUserInfo, sendData, t]);
+    if (result.autoBanned) {
+      sendData({ type: "banned_kick" });
+      setReportToastMsg("User has been permanently banned");
+      if (reportToastTimerRef.current) {
+        clearTimeout(reportToastTimerRef.current);
+      }
+      setShowReportToast(true);
+      reportToastTimerRef.current = setTimeout(() => setShowReportToast(false), 3000);
+      return;
+    }
+
+    setReportToastMsg(String(t("videochat.report.success")));
+    setShowReportToast(true);
+    if (reportToastTimerRef.current) {
+      clearTimeout(reportToastTimerRef.current);
+    }
+    reportToastTimerRef.current = setTimeout(() => setShowReportToast(false), 3000);
+  }, [connected, remotePeerIdentity, remoteUserInfo, sendData, t]);
 
   const handleFollowRemote = useCallback(async () => {
     if (!remoteUserInfo?.userId || !localUserInfo?.userId || followLoading) {
@@ -398,15 +415,6 @@ export function useVideoPageState(props: VideoChatPageProps) {
       setFollowLoading(false);
     }
   }, [followLoading, isFollowingRemote, localUserInfo?.userId, remoteUserInfo?.userId]);
-
-  const handleVolumeChange = useCallback((value: number) => {
-    const volume = value / 100;
-    audioEls.current.forEach((element) => {
-      if ("volume" in element) {
-        (element as HTMLMediaElement).volume = volume;
-      }
-    });
-  }, [audioEls]);
 
   const handleSkip = useCallback(() => {
     screenShare.cleanupScreenShare();
@@ -487,6 +495,7 @@ export function useVideoPageState(props: VideoChatPageProps) {
 
     if (isNewConnection) {
       clearMessages();
+      prevMsgCountRef.current = 0;
       setRemoteUserInfo(null);
       setIsFollowingRemote(false);
       setPeerInfoHovered(false);
@@ -578,20 +587,20 @@ export function useVideoPageState(props: VideoChatPageProps) {
 
     let active = true;
     const checkFollow = async () => {
-        try {
-            const { data } = await supabase
-              .from("follows")
-              .select("follower_id")
-              .eq("follower_id", localUserInfo.userId)
-              .eq("following_id", remoteUserInfo.userId)
-              .maybeSingle();
+      try {
+        const { data } = await supabase
+          .from("follows")
+          .select("follower_id")
+          .eq("follower_id", localUserInfo.userId)
+          .eq("following_id", remoteUserInfo.userId)
+          .maybeSingle();
 
-            if (active) {
-              setIsFollowingRemote(Boolean(data));
-            }
-        } catch (error) {
-          console.error('checkFollow error:', error);
+        if (active) {
+          setIsFollowingRemote(Boolean(data));
         }
+      } catch (error) {
+        console.error('checkFollow error:', error);
+      }
     };
     checkFollow();
     return () => { active = false; };
@@ -686,6 +695,7 @@ export function useVideoPageState(props: VideoChatPageProps) {
     statusMessage,
     connected,
     cameraMuted,
+    audioMuted,
     remoteCameraMuted,
     isSearching,
     remotePeerIdentity,
@@ -717,6 +727,8 @@ export function useVideoPageState(props: VideoChatPageProps) {
     handleVolumeChange,
 
     handleSkip,
+    handleToggleAudio,
+    handleToggleSearch,
     handleExit,
     dotColor,
   };

@@ -9,10 +9,12 @@ interface AvatarProps {
   className?: string;
   style?: React.CSSProperties;
   frameId?: FrameId | string | null;
+  loading?: 'lazy' | 'eager';
+  decoding?: 'async' | 'sync' | 'auto';
 }
 
-export const Avatar: React.FC<AvatarProps> = ({ 
-  src, name, size = 32, isOnline, className = '', style = {}, frameId 
+export const Avatar: React.FC<AvatarProps> = ({
+  src, name, size = 32, isOnline, className = '', style = {}, frameId, loading, decoding
 }) => {
   const [error, setError] = useState(false);
 
@@ -22,11 +24,11 @@ export const Avatar: React.FC<AvatarProps> = ({
 
   const initials = name
     ? name
-        .split(' ')
-        .map((n) => n[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase()
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase()
     : '?';
 
   const combinedStyle: React.CSSProperties = {
@@ -69,6 +71,8 @@ export const Avatar: React.FC<AvatarProps> = ({
         style={combinedStyle}
         referrerPolicy="no-referrer"
         onError={() => setError(true)}
+        loading={loading}
+        decoding={decoding}
       />
     );
   };
@@ -91,9 +95,9 @@ export const Avatar: React.FC<AvatarProps> = ({
   const content = (
     <div className={`relative inline-block rounded-full ${className}`} style={{ width: size, height: size }}>
       {renderContent()}
-      
+
       {isOnline && (
-        <div 
+        <div
           className="absolute rounded-full border-2 border-white dark:border-gray-950 bg-emerald-500 shadow-sm"
           style={{
             width: dotSize,

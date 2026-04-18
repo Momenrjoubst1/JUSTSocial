@@ -452,6 +452,36 @@ function RealisticEarth() {
         if (cloudsRef.current) cloudsRef.current.rotation.y += 0.0007; // Clouds move slightly faster
     });
 
+    // Cleanup hook for Three.js Geometries & Materials to prevent memory leaks Unmounting
+    useEffect(() => {
+        return () => {
+            if (earthRef.current) {
+                if (earthRef.current.geometry) earthRef.current.geometry.dispose();
+                if (earthRef.current.material) {
+                    if (Array.isArray(earthRef.current.material)) {
+                        earthRef.current.material.forEach(m => m.dispose());
+                    } else {
+                        earthRef.current.material.dispose();
+                    }
+                }
+            }
+            if (cloudsRef.current) {
+                if (cloudsRef.current.geometry) cloudsRef.current.geometry.dispose();
+                if (cloudsRef.current.material) {
+                    if (Array.isArray(cloudsRef.current.material)) {
+                        cloudsRef.current.material.forEach(m => m.dispose());
+                    } else {
+                        cloudsRef.current.material.dispose();
+                    }
+                }
+            }
+            // Dispose textures
+            [colorMap, specularMap, cloudsMap].forEach(tex => {
+                if (tex) tex.dispose();
+            });
+        };
+    }, [colorMap, specularMap, cloudsMap]);
+
     return (
         <group position={[-18, 5, -25]} rotation={[0.2, 0, 0.1]}>
             {/* Earth Core */}

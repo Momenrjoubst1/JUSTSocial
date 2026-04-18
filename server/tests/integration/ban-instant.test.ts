@@ -2,7 +2,10 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { supabase as supabaseAdmin } from '../../services/supabase.service.js';
 import { authMiddleware } from '../../middleware/auth.middleware.js';
 
-describe('Ban Instant Enforcement', () => {
+/** Real Supabase + service role; set RUN_SUPABASE_INTEGRATION=1 to enable. */
+const runSupabaseIntegration = process.env.RUN_SUPABASE_INTEGRATION === '1';
+
+describe.skipIf(!runSupabaseIntegration)('Ban Instant Enforcement', () => {
   let testUserId: string;
 
   beforeAll(async () => {

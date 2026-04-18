@@ -1,0 +1,15 @@
+.shiny-text {
+  display: inline-block;
+}
+
+.animate-shine {
+  animation: shine 3s linear infinite;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes shine {
+  0% { background-position: 150% center; }
+  100% { background-position: -50% center; }
+}

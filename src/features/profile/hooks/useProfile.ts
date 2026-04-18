@@ -35,7 +35,7 @@ export const useProfile = (id: string | undefined, email: string) => {
   const [coverModStatus, setCoverModStatus] = useState<AvatarModStatus>({
     checking: false, error: null
   });
-  
+
   const avatarErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -98,13 +98,13 @@ export const useProfile = (id: string | undefined, email: string) => {
           }
           if (profileExtras.cover_url) setCoverImage(profileExtras.cover_url);
           if (profileExtras.avatar_frame) setAvatarFrame(profileExtras.avatar_frame);
-          
+
           if (data.chat_hanger) setChatHanger(data.chat_hanger as string);
           else {
             const localHanger = localStorage.getItem(`hanger_${targetId}`);
             if (localHanger) setChatHanger(localHanger);
           }
-          
+
           if (data.bio) setBio(data.bio);
           if (data.full_name) setFullName(data.full_name);
 
@@ -114,14 +114,25 @@ export const useProfile = (id: string | undefined, email: string) => {
           } else {
             setUniversity('');
           }
-          
+
           if (data.username) {
             setUsername(data.username);
           } else if (isOwnProfile && email) {
             const baseUsername = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, '');
             const generatedUsername = `${baseUsername}_${Math.floor(1000 + Math.random() * 9000)}`;
             setUsername(generatedUsername);
-            await supabase.from("users").update({ username: generatedUsername }).eq("id", user?.id);
+            const session = await supabase.auth.getSession();
+            const token = session.data.session?.access_token;
+            if (token) {
+              await fetch('/api/profile', {
+                method: 'PUT',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username: generatedUsername })
+              });
+            }
           } else {
             setUsername(email?.split("@")[0] || "user");
           }
@@ -160,11 +171,26 @@ export const useProfile = (id: string | undefined, email: string) => {
     loadProfileData();
   }, [id, email]);
 
+  const updateProfileViaApi = async (updates: any) => {
+    if (!currentUserId) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+
+    const res = await fetch('/api/profile/me', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify(updates)
+    });
+    if (!res.ok) throw new Error('Failed to update profile');
+  };
+
   const saveSocialLinks = async (links: SocialLinks) => {
     if (!currentUserId) return;
     try {
-      const { error } = await supabase.from("users").update({ social_links: links }).eq("id", currentUserId);
-      if (error) throw error;
+      await updateProfileViaApi({ social_links: links });
       setSocialLinks(links);
     } catch (err) { console.error("Error saving social links:", err); }
   };
@@ -172,8 +198,7 @@ export const useProfile = (id: string | undefined, email: string) => {
   const saveBio = async (newBio: string) => {
     if (!currentUserId) return;
     try {
-      const { error } = await supabase.from("users").update({ bio: newBio }).eq("id", currentUserId);
-      if (error) throw error;
+      await updateProfileViaApi({ bio: newBio });
       setBio(newBio);
     } catch (err) { console.error("Error saving bio:", err); }
   };
@@ -181,8 +206,7 @@ export const useProfile = (id: string | undefined, email: string) => {
   const saveFullName = async (newName: string) => {
     if (!currentUserId) return;
     try {
-      const { error } = await supabase.from("users").update({ full_name: newName }).eq("id", currentUserId);
-      if (error) throw error;
+      await updateProfileViaApi({ full_name: newName });
       setFullName(newName);
     } catch (err) { console.error("Error saving full name:", err); }
   };
@@ -191,11 +215,7 @@ export const useProfile = (id: string | undefined, email: string) => {
     if (!currentUserId) return;
     const safeUniversity = UNIVERSITY_OPTIONS.includes(newUniversity as any) ? newUniversity : '';
     try {
-      const { error } = await supabase
-        .from("users")
-        .update({ university: safeUniversity || null })
-        .eq("id", currentUserId);
-      if (error) throw error;
+      await updateProfileViaApi({ university: safeUniversity || null });
       setUniversity(safeUniversity);
     } catch (err) {
       console.error("Error saving university:", err);
@@ -205,8 +225,7 @@ export const useProfile = (id: string | undefined, email: string) => {
   const saveAvatarFrame = async (newFrame: FrameId) => {
     if (!currentUserId) return;
     try {
-      const { error } = await supabase.from("users").update({ avatar_frame: newFrame }).eq("id", currentUserId);
-      if (error) throw error;
+      await updateProfileViaApi({ avatar_frame: newFrame });
       setAvatarFrame(newFrame);
     } catch (err) { console.error("Error saving avatar frame:", err); }
   };
@@ -216,8 +235,7 @@ export const useProfile = (id: string | undefined, email: string) => {
     try {
       setChatHanger(newHanger);
       localStorage.setItem(`hanger_${currentUserId}`, newHanger);
-      const { error } = await supabase.from("users").update({ chat_hanger: newHanger }).eq("id", currentUserId);
-      if (error) console.warn("Supabase chat_hanger error (Add it to DB):", error.message);
+      await updateProfileViaApi({ chat_hanger: newHanger });
     } catch (err) { console.error("Error saving chat hanger:", err); }
   };
 
@@ -239,7 +257,7 @@ export const useProfile = (id: string | undefined, email: string) => {
 
     try {
       const imageDataUrl = await processImage(file, { maxWidth: 500, maxHeight: 500, quality: 0.85 });
-      
+
       const { getFingerprint } = await import('@/hooks/useFingerprint');
       const fp = await getFingerprint();
 
@@ -249,10 +267,10 @@ export const useProfile = (id: string | undefined, email: string) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageBase64: imageDataUrl, userId: currentUserId, fingerprint: fp }),
       });
-      
+
       if (!res.ok) throw new Error('Moderation API error');
       const data = await res.json();
-      
+
       if (!data.safe) {
         if (data.banned) {
           setAvatarModStatus({ checking: false, error: '🚫 تم حظر حسابك نهائياً بسبب محاولة رفع محتوى مخالف' });
@@ -269,12 +287,13 @@ export const useProfile = (id: string | undefined, email: string) => {
         throw new Error('فشل الرفع إلى الخادم');
       }
 
-      const { error: saveError } = await saveUserProfileImage(currentUserId, finalImageUrl);
+      const saveProfileResult = await saveUserProfileImage(currentUserId, finalImageUrl);
+      const saveError = saveProfileResult.error;
       if (saveError) {
         setAvatarModStatus({ checking: false, error: `⚠️ فشل في الحفظ: ${saveError.message}` });
         return;
       }
-      
+
       setProfileImage(finalImageUrl);
       setAvatarModStatus({ checking: false, error: null });
     } catch (err) {
@@ -302,7 +321,7 @@ export const useProfile = (id: string | undefined, email: string) => {
 
     try {
       const imageDataUrl = await processImage(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
-      
+
       const { getFingerprint } = await import('@/hooks/useFingerprint');
       const fp = await getFingerprint();
 
@@ -312,10 +331,10 @@ export const useProfile = (id: string | undefined, email: string) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageBase64: imageDataUrl, userId: currentUserId, fingerprint: fp }),
       });
-      
+
       if (!res.ok) throw new Error('Moderation API error');
       const data = await res.json();
-      
+
       if (!data.safe) {
         if (data.banned) {
           setCoverModStatus({ checking: false, error: '🚫 تم حظر حسابك' });
@@ -332,12 +351,13 @@ export const useProfile = (id: string | undefined, email: string) => {
         throw new Error('فشل الرفع إلى الخادم');
       }
 
-      const { error: saveError } = await saveUserCoverImage(currentUserId, finalImageUrl);
+      const saveCoverResult = await saveUserCoverImage(currentUserId, finalImageUrl);
+      const saveError = saveCoverResult.error;
       if (saveError) {
         setCoverModStatus({ checking: false, error: `⚠️ فشل في الحفظ: ${saveError.message}` });
         return;
       }
-      
+
       setCoverImage(finalImageUrl);
       setCoverModStatus({ checking: false, error: null });
     } catch (err) {
@@ -351,16 +371,22 @@ export const useProfile = (id: string | undefined, email: string) => {
   const handleFollowToggle = async () => {
     if (!currentUserId || !viewedUserId) return;
     try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) return;
+
       if (isFollowing) {
-        await supabase.from("follows").delete().eq("follower_id", currentUserId).eq("following_id", viewedUserId);
+        await fetch(`/api/follow/${viewedUserId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         setIsFollowing(false);
         setFollowersCount(prev => prev - 1);
       } else {
-        await supabase.from("follows").insert([{ follower_id: currentUserId, following_id: viewedUserId }]);
-        const { data: isFollowingUs } = await supabase.from("follows").select("*").eq("follower_id", viewedUserId).eq("following_id", currentUserId).single();
-        await supabase.from("notifications").insert([{
-          user_id: viewedUserId, actor_id: currentUserId, type: 'follow', message: isFollowingUs ? 'followed you back' : 'started following you'
-        }]);
+        await fetch(`/api/follow/${viewedUserId}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
         setIsFollowing(true);
         setFollowersCount(prev => prev + 1);
       }
@@ -375,3 +401,5 @@ export const useProfile = (id: string | undefined, email: string) => {
     handleImageUpload, handleCoverUpload, handleFollowToggle
   };
 };
+
+

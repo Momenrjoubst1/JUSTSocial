@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { api } from '@/lib/api';
 import { useAuthContext } from '@/context/AuthContext';
 import { generateKeyPair, exportPublicKey, encryptPrivateKeyWithPassword, decryptPrivateKeyWithPassword, APP_ENCRYPTION_VERSION, importPrivateKey } from '@/features/chat/services/crypto';
 import { savePrivateKey, getPrivateKey, deletePrivateKey } from '@/features/chat/services/keyStorage';
@@ -118,10 +119,18 @@ export function E2EEProvider({ children }: { children: ReactNode }) {
                     setPublicKey(newPubKey);
                 }
 
-                await supabase.from('user_public_keys').upsert({
-                    user_id: user.id,
-                    public_key: newPubKey
-                }, { onConflict: 'user_id' });
+                const session = await supabase.auth.getSession();
+                const token = session.data.session?.access_token;
+                if (token) {
+                    await fetch('/api/keys', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ publicKey: newPubKey, encryptedPrivateKey: '' })
+                    });
+                }
 
                 if (isMounted) setKeysReady(true);
             } catch (err) {
@@ -166,8 +175,18 @@ export function E2EEProvider({ children }: { children: ReactNode }) {
                 await deletePrivateKey(user.id);
                 localStorage.removeItem(`chat_pub_key_${user.id}`);
                 sessionStorage.removeItem('temp_e2ee_pass');
-                await supabase.from('encrypted_private_keys').delete().eq('user_id', user.id);
-                
+
+                const session = await supabase.auth.getSession();
+                const token = session.data.session?.access_token;
+                if (token) {
+                    await fetch('/api/keys', {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                }
+
                 // Activate fake UI
                 sessionStorage.setItem('panic_mode', 'true');
                 window.dispatchEvent(new Event('panic-mode-activated'));
@@ -226,3 +245,4 @@ export function useE2EE() {
     }
     return context;
 }
+

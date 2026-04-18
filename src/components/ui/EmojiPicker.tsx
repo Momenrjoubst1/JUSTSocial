@@ -88,7 +88,7 @@ export function EmojiPicker({ isOpen, onClose, onEmojiSelect }: EmojiPickerProps
             if (saved) {
                 recentIds = JSON.parse(saved);
             }
-        } catch(e) {}
+        } catch (e) { console.warn("Cleaned up error:", e); }
         if (!recentIds.length) recentIds = DEFAULT_RECENT;
 
         // Populate recent
@@ -179,7 +179,7 @@ export function EmojiPicker({ isOpen, onClose, onEmojiSelect }: EmojiPickerProps
                 let recentIds = saved ? JSON.parse(saved) : DEFAULT_RECENT;
                 recentIds = [emojiObj.id, ...recentIds.filter((id: string) => id !== emojiObj.id)].slice(0, 36);
                 localStorage.setItem('skillswap_recent_emojis', JSON.stringify(recentIds));
-            } catch(e) {}
+            } catch (e) { console.warn("Cleaned up error:", e); }
         }
     }, [getSkinVariation, onEmojiSelect]);
 
@@ -429,3 +429,4 @@ export function EmojiPicker({ isOpen, onClose, onEmojiSelect }: EmojiPickerProps
         </div>
     );
 }
+

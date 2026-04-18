@@ -97,34 +97,24 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onClose }) 
 
     setActionLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
       if (isFollowing) {
-        await supabase
-          .from('follows')
-          .delete()
-          .eq('follower_id', currentUserId)
-          .eq('following_id', userId);
+        const res = await fetch(`/api/follow/${userId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${session.access_token}` }
+        });
+        if (!res.ok) throw new Error('Failed to unfollow');
+        
         setIsFollowing(false);
         setStats(prev => ({ ...prev, followers: Math.max(0, prev.followers - 1) }));
       } else {
-        await supabase
-          .from('follows')
-          .insert({ follower_id: currentUserId, following_id: userId });
-
-        // Check if they are already following us to send "followed you back"
-        const { data: isFollowingUs } = await supabase
-          .from('follows')
-          .select('*')
-          .eq('follower_id', userId)
-          .eq('following_id', currentUserId)
-          .single();
-
-        // Create a real notification for the followed user
-        await supabase.from('notifications').insert([{
-          user_id: userId,
-          actor_id: currentUserId,
-          type: 'follow',
-          message: isFollowingUs ? 'followed you back' : 'started following you'
-        }]);
+        const res = await fetch(`/api/follow/${userId}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${session.access_token}` }
+        });
+        if (!res.ok) throw new Error('Failed to follow');
 
         setIsFollowing(true);
         setStats(prev => ({ ...prev, followers: prev.followers + 1 }));

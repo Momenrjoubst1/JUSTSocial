@@ -40,12 +40,26 @@ export function ChatSidebar({ isDark }: ChatSidebarProps) {
             </button>
             <h1 className="text-2xl font-bold tracking-tight">Messages</h1>
           </div>
-          <button 
-            className={`p-2.5 rounded-full transition-all cursor-pointer ${isDark ? 'hover:bg-white/10 text-foreground' : 'hover:bg-black/5 text-foreground'}`}
-            title="New Message"
-          >
-            <Plus size={22} strokeWidth={2.5} />
-          </button>
+          
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={() => navigate('/chat')}
+              className={`p-2.5 rounded-full transition-all cursor-pointer text-primary hover:bg-primary/10`}
+              title="Video Chat"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/>
+                <rect x="2" y="6" width="14" height="12" rx="2.5"/>
+              </svg>
+            </button>
+
+            <button 
+              className={`p-2.5 rounded-full transition-all cursor-pointer ${isDark ? 'hover:bg-white/10 text-foreground' : 'hover:bg-black/5 text-foreground'}`}
+              title="New Message"
+            >
+              <Plus size={22} strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}

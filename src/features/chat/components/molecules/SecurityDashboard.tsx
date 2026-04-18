@@ -71,7 +71,19 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ className 
         try {
             // Merge metadata safely
             const newMeta = { ...(user.user_metadata || {}), emergency_contact: emergencyContact };
-            const { error } = await supabase.from('users').update({ user_metadata: newMeta }).eq('id', user.id);
+            const session = await supabase.auth.getSession();
+            const token = session.data.session?.access_token;
+            let error = null;
+            if (token) {
+                const res = await fetch('/api/profile/me', {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ` + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_metadata: newMeta })
+                });
+                if (!res.ok) error = new Error('Failed to update metadata');
+            } else {
+                error = new Error('No token');
+            }
             if (!error) {
                 setStatusMsg('Emergency contact saved');
                 // try to update context if provided
@@ -95,7 +107,19 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ className 
             const hashBuffer = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(panicPin));
             const hashHex = hexFromBuffer(hashBuffer);
             const newMeta = { ...(user.user_metadata || {}), panic_pin_hash: hashHex };
-            const { error } = await supabase.from('users').update({ user_metadata: newMeta }).eq('id', user.id);
+            const session = await supabase.auth.getSession();
+            const token = session.data.session?.access_token;
+            let error = null;
+            if (token) {
+                const res = await fetch('/api/profile/me', {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ` + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_metadata: newMeta })
+                });
+                if (!res.ok) error = new Error('Failed to update metadata');
+            } else {
+                error = new Error('No token');
+            }
             if (!error) {
                 setStatusMsg('Panic PIN set');
                 if (setUserMetadata) setUserMetadata(newMeta);
@@ -211,3 +235,5 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ className 
 };
 
 export default SecurityDashboard;
+
+

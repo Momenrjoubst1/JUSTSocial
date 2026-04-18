@@ -51,15 +51,11 @@ export default function BannedPage() {
         lfo: OscillatorNode;
         masterGain: GainNode;
     } | null>(null);
-    const [pulse, setPulse] = useState(true);
 
     useEffect(() => {
         // Start the alarm sound
         const audio = playBanAlarm();
         audioRef.current = audio;
-
-        // Pulsing animation
-        const pulseInterval = setInterval(() => setPulse((p) => !p), 1000);
 
         // Auto-stop the alarm after 6 seconds (to avoid being annoying)
         const stopTimer = setTimeout(() => {
@@ -85,7 +81,6 @@ export default function BannedPage() {
         window.addEventListener('keydown', handleInteraction);
 
         return () => {
-            clearInterval(pulseInterval);
             clearTimeout(stopTimer);
             window.removeEventListener('click', handleInteraction);
             window.removeEventListener('keydown', handleInteraction);
@@ -118,55 +113,25 @@ export default function BannedPage() {
 
     return (
         <div
-            className="fixed inset-0 z-[99999] flex flex-col items-center justify-center p-4 text-center selection:bg-red-500/30"
-            style={{
-                background: pulse
-                    ? "radial-gradient(ellipse at center, rgba(220,38,38,0.15) 0%, #000 70%)"
-                    : "radial-gradient(ellipse at center, rgba(220,38,38,0.05) 0%, #000 70%)",
-                transition: "background 0.8s ease-in-out",
-            }}
+            className="banned-bg-animation fixed inset-0 z-[99999] flex flex-col items-center justify-center p-4 text-center selection:bg-red-500/30"
         >
             {/* Flashing red border glow */}
             <div
-                className="flex flex-col items-center justify-center max-w-2xl border p-8 md:p-12 rounded-3xl"
-                style={{
-                    background: "rgba(10,10,10,0.95)",
-                    borderColor: pulse ? "rgba(220,38,38,0.6)" : "rgba(220,38,38,0.2)",
-                    boxShadow: pulse
-                        ? "0 0 80px -10px rgba(220,38,38,0.5), inset 0 0 40px -20px rgba(220,38,38,0.15)"
-                        : "0 0 40px -10px rgba(220,38,38,0.2), inset 0 0 20px -20px rgba(220,38,38,0.05)",
-                    transition: "all 0.8s ease-in-out",
-                }}
+                className="banned-box-animation flex flex-col items-center justify-center max-w-2xl border p-8 md:p-12 rounded-3xl"
             >
                 {/* Animated warning icon */}
                 <div
-                    className="p-4 rounded-full mb-6"
-                    style={{
-                        background: pulse ? "rgba(220,38,38,0.15)" : "rgba(220,38,38,0.08)",
-                        boxShadow: pulse ? "0 0 30px rgba(220,38,38,0.4)" : "0 0 10px rgba(220,38,38,0.1)",
-                        transition: "all 0.8s ease-in-out",
-                    }}
+                    className="banned-icon-box-animation p-4 rounded-full mb-6"
                 >
                     <ShieldAlert
-                        className="w-16 h-16"
+                        className="banned-icon-animation w-16 h-16"
                         strokeWidth={1.5}
-                        style={{
-                            color: pulse ? "#ef4444" : "#b91c1c",
-                            filter: pulse ? "drop-shadow(0 0 12px rgba(239,68,68,0.7))" : "none",
-                            transition: "all 0.8s ease-in-out",
-                        }}
                     />
                 </div>
 
                 {/* ⚠ WARNING label */}
                 <div
-                    className="flex items-center gap-2 mb-4 px-4 py-1.5 rounded-full text-xs font-bold tracking-[0.25em] uppercase"
-                    style={{
-                        background: pulse ? "rgba(220,38,38,0.2)" : "rgba(220,38,38,0.08)",
-                        color: "#f87171",
-                        border: "1px solid rgba(220,38,38,0.3)",
-                        transition: "all 0.8s ease-in-out",
-                    }}
+                    className="banned-label-animation flex items-center gap-2 mb-4 px-4 py-1.5 rounded-full text-xs font-bold tracking-[0.25em] uppercase"
                 >
                     ⚠ Security Violation Detected
                 </div>

@@ -1,9 +1,11 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import { Buffer } from 'buffer';
 import { reportLimiter, textCheckLimiter } from '../middleware/rate-limiters.js';
 import { asyncHandler } from '../utils/async-handler.js';
 import { supabase } from '../services/supabase.service.js';
 import { checkIsBanned, banFingerprintAndAllUsers } from '../services/ban.service.js';
+import { logger } from '../utils/logger.js';
 import { checkWithSightengine } from '../services/moderation.service.js';
 import { analyzeText } from '../utils/text-moderator.js';
 import redis from '../config/redis-client.js';
@@ -95,7 +97,7 @@ router.post('/report', reportLimiter, validate(reportSchema), asyncHandler(async
 
       if (riskScore > 0.80) {
         riskCategory = 'offensive_gesture';
-        const fileName = `screenshot_evidence_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
+        const fileName = `screenshot_evidence_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.jpg`;
         const buffer = Buffer.from(imageBase64, 'base64');
         const { error: uploadErr } = await supabase.storage.from('moderation-evidence').upload(fileName, buffer, { contentType: 'image/jpeg', upsert: false });
         if (!uploadErr) {
@@ -103,7 +105,9 @@ router.post('/report', reportLimiter, validate(reportSchema), asyncHandler(async
           screenshotUrl = publicUrlData?.publicUrl || null;
         }
       }
-    } catch (err) {}
+    } catch (err) {
+      logger.error('Failed to upload moderation evidence:', err);
+    }
   }
 
   await supabase.from('reports').insert({
@@ -180,7 +184,7 @@ router.post('/moderate', textCheckLimiter, validate(moderateSchema), asyncHandle
   else if (riskScore >= 0.7) actionTaken = 'warned';
 
   if (actionTaken === 'warned' || actionTaken === 'banned') {
-    const fileName = `screenshot_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
+    const fileName = `screenshot_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.jpg`;
     const buffer = Buffer.from(imageBase64, 'base64');
     const { error: uploadErr } = await supabase.storage.from('moderation-screenshots').upload(fileName, buffer, { contentType: 'image/jpeg', upsert: false });
     if (!uploadErr) {
@@ -279,7 +283,7 @@ router.post('/moderate-avatar', textCheckLimiter, asyncHandler(async (req: Reque
     // 1. Upload evidence screenshot
     let evidenceUrl: string | null = null;
     try {
-      const fileName = `avatar_violation_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
+      const fileName = `avatar_violation_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.jpg`;
       const buffer = Buffer.from(base64Data, 'base64');
       const { error: uploadErr } = await supabase.storage
         .from('moderation-evidence')

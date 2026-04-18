@@ -13,6 +13,27 @@
  *  9. Private key extractability guard
  */
 import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { webcrypto } from 'node:crypto';
+
+/** Minimal browser globals for Web Crypto + base64 helpers under Vitest (Node). */
+function ensureWebCryptoGlobals() {
+  const g = globalThis as typeof globalThis & {
+    btoa?: (s: string) => string;
+    atob?: (b64: string) => string;
+  };
+  if (!g.crypto?.subtle) {
+    Object.defineProperty(g, 'crypto', { value: webcrypto, configurable: true });
+  }
+  if (typeof g.btoa !== 'function') {
+    g.btoa = (s: string) => Buffer.from(s, 'binary').toString('base64');
+  }
+  if (typeof g.atob !== 'function') {
+    g.atob = (b64: string) => Buffer.from(b64, 'base64').toString('binary');
+  }
+  if (!(globalThis as Record<string, unknown>).window) {
+    (globalThis as Record<string, unknown>).window = globalThis;
+  }
+}
 
 // We need to mock supabase before importing crypto module
 vi.mock('@/lib/supabaseClient', () => ({
@@ -45,6 +66,7 @@ describe('crypto service', () => {
   let receiverPubB64: string;
 
   beforeAll(async () => {
+    ensureWebCryptoGlobals();
     senderKeyPair = await generateKeyPair();
     receiverKeyPair = await generateKeyPair();
     senderPubB64 = await exportPublicKey(senderKeyPair.publicKey);

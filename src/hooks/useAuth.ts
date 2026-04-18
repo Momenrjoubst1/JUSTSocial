@@ -66,7 +66,7 @@ export function useAuth() {
         const user = await getCurrentUser();
         if (isMounted) {
           setAuthState({
-            user,
+            user: user ?? null,
             isLoading: false,
             isAuthenticated: !!user,
           });
@@ -113,6 +113,12 @@ export function useAuth() {
         
       } catch (error) {
         console.error('[useAuth.ts] [signIn]:', error);
+        const message = error instanceof Error ? error.message : 'Sign in failed';
+        setError(message);
+        return {
+          data: { user: null, session: null },
+          error: { message, name: 'AuthApiError', status: 0 } as import('@supabase/supabase-js').AuthError,
+        };
       }
   };
 
@@ -131,6 +137,12 @@ export function useAuth() {
         
       } catch (error) {
         console.error('[useAuth.ts] [signUp]:', error);
+        const message = error instanceof Error ? error.message : 'Sign up failed';
+        setError(message);
+        return {
+          data: { user: null, session: null },
+          error: { message, name: 'AuthApiError', status: 0 } as import('@supabase/supabase-js').AuthError,
+        };
       }
   };
 
@@ -145,9 +157,9 @@ export function useAuth() {
               localStorage.removeItem(`chat_pub_key_${authState.user.id}`);
           }
           sessionStorage.removeItem('temp_e2ee_pass');
-          const { error } = await signOut();
-          if (error) {
-            setError(error.message);
+          const signOutResult = await signOut();
+          if (signOutResult?.error) {
+            setError(signOutResult.error.message);
           }
         
       } catch (error) {

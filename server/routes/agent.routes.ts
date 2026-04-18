@@ -1,14 +1,14 @@
 import { Router } from 'express';
 import { asyncHandler } from '../utils/async-handler.js';
 import { agentLimiter } from '../middleware/rate-limiters.js';
-import { isValidRoomName, spawnAgent, stopAgent } from '../services/agent.service.js';
+import { isValidRoomName, spawnAgent, stopAgent, getAgentStatus } from '../services/agent.service.js';
 import { validate } from '../middleware/validate.middleware.js';
 import { agentSchema } from '../validators/schemas.js';
 
 const router = Router();
 
 router.post('/agent/start', agentLimiter, validate(agentSchema), asyncHandler(async (req, res) => {
-  const { roomName } = req.body;
+  const { roomName, identity } = req.body;
 
   if (!isValidRoomName(roomName)) {
     res.status(400).json({
@@ -19,21 +19,19 @@ router.post('/agent/start', agentLimiter, validate(agentSchema), asyncHandler(as
     return;
   }
 
-  const success = spawnAgent(roomName);
+  const success = spawnAgent(roomName, identity);
   if (!success) {
     res.status(429).json({
-      success: false,
-      code: 'TOO_MANY_REQUESTS',
-      message: 'System is at maximum capacity or agent already running.'
+      error: "Server is busy or agent already running for this user. Please try again in a moment."        
     });
     return;
   }
 
-  res.json({ success: true, message: `✅ Agent started for room: ${roomName}`, roomName });
+  res.json({ success: true, message: `✅ Agent started for room: ${roomName} (identity: ${identity || 'all'})`, roomName });
 }));
 
 router.post('/agent/stop', agentLimiter, validate(agentSchema), asyncHandler(async (req, res) => {
-  const { roomName } = req.body;
+  const { roomName, identity } = req.body;
 
   if (!isValidRoomName(roomName)) {
     res.status(400).json({
@@ -44,16 +42,23 @@ router.post('/agent/stop', agentLimiter, validate(agentSchema), asyncHandler(asy
     return;
   }
 
-  const killed = stopAgent(roomName);
+  const killed = stopAgent(roomName, identity);
   if (killed) {
     res.json({ success: true, message: '✅ Agent stopped' });
   } else {
     res.status(404).json({
       success: false,
       code: 'NOT_FOUND',
-      message: 'No agent running for this room'
+      message: 'No agent running for this room and user'
     });
   }
+}));
+
+router.get('/agent/status', asyncHandler(async (req, res) => {
+  const roomName = req.query.roomName as string | undefined;
+  const identity = req.query.identity as string | undefined;
+  const status = getAgentStatus(roomName, identity);
+  res.json(status);
 }));
 
 export default router;

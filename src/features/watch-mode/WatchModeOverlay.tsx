@@ -21,6 +21,38 @@ const YT_STATE = {
   CUED: 5,
 } as const;
 
+/* ── Invidious instances (tried in order until one succeeds) ──────────── */
+const INVIDIOUS_INSTANCES = [
+  "vid.puffyan.us",
+  "yewtu.be",
+  "invidious.fdn.fr",
+  "inv.tux.pizza",
+  "inv.nadeko.net",
+];
+
+/**
+ * Try fetching from each Invidious instance sequentially until one succeeds.
+ * Returns the Response from the first successful instance, or null if all fail.
+ */
+async function fetchFromInvidious(
+  path: string,
+  init?: RequestInit,
+): Promise<Response | null> {
+  for (const instance of INVIDIOUS_INSTANCES) {
+    try {
+      const url = `https://${instance}/api/v1/${path}`;
+      const res = await fetch(url, {
+        ...init,
+        headers: { Accept: "application/json", ...init?.headers },
+      });
+      if (res.ok) return res;
+    } catch {
+      // Instance is down, try the next one
+    }
+  }
+  return null;
+}
+
 import { WatchVideoResult, WatchSyncMessage, WatchModeOverlayProps } from "./types";
 
 export const WatchModeOverlay: React.FC<WatchModeOverlayProps> = ({
@@ -46,9 +78,20 @@ export const WatchModeOverlay: React.FC<WatchModeOverlayProps> = ({
   const [watchSearchResults, setWatchSearchResults] = useState<WatchVideoResult[]>([]);
   const [isWatchSearching, setIsWatchSearching] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [isExitButtonHovered, setIsExitButtonHovered] = useState(false);
+  const [hoveredResultId, setHoveredResultId] = useState<string | null>(null);
   const [embedSource, setEmbedSource] = useState<"inv" | "yt">(
     () => (sessionStorage.getItem("vc_embed_src") as "inv" | "yt") || "inv"
   );
+
+  type VideoSrcObject = MediaStream | MediaSource | Blob | null;
+
+  const syncStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showSyncStatus = useCallback((msg: string) => {
+    setSyncStatus(msg);
+    if (syncStatusTimer.current) clearTimeout(syncStatusTimer.current);
+    syncStatusTimer.current = setTimeout(() => setSyncStatus(null), 2000);
+  }, []);
 
   const watchLocalVideoRef = useRef<HTMLVideoElement>(null);
   const watchRemoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -59,6 +102,8 @@ export const WatchModeOverlay: React.FC<WatchModeOverlayProps> = ({
   const lastSyncTimeRef = useRef(0);
   const playerReadyRef = useRef(false);
   const currentTimeRef = useRef(0);
+  const messageListenerAttachedRef = useRef(false);
+  const [iframeError, setIframeError] = useState<string | null>(null);
 
   /** Send a command to the YouTube iframe via postMessage */
   const sendYTCommand = useCallback((func: string, args: any[] = []) => {
@@ -72,9 +117,21 @@ export const WatchModeOverlay: React.FC<WatchModeOverlayProps> = ({
   /** Initialize listening on the iframe */
   useEffect(() => {
     if (!watchVideoId) return;
+    setIframeError(null);
 
     const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== "https://www.youtube.com" && event.origin !== "https://www.youtube-nocookie.com") return;
+      const iframeSrc = iframeRef.current?.src;
+      let expectedOrigin: string | null = null;
+      if (iframeSrc) {
+        try {
+          expectedOrigin = new URL(iframeSrc).origin;
+        } catch {
+          expectedOrigin = null;
+        }
+      }
+
+      // If we can resolve an iframe origin, enforce it. Otherwise allow events.
+      if (expectedOrigin && event.origin !== expectedOrigin) return;
 
       let data: {
         event: string;
@@ -86,44 +143,50 @@ export const WatchModeOverlay: React.FC<WatchModeOverlayProps> = ({
         return;
       }
 
-      // Track current time from info events
-      if (data.event === "infoDelivery" && typeof data.info?.currentTime === "number") {
-        currentTimeRef.current = data.info.currentTime;
-      }
-
-      // Handle state changes
-      if (data.event === "onStateChange" || data.event === "initialDelivery") {
-        const state = data.info;
-        if (typeof state !== "number") return;
-
-        if (isSyncActionRef.current) return;
-        const now = Date.now();
-        if (now - lastSyncTimeRef.current < 500) return;
-
-        if (state === YT_STATE.PLAYING) {
-          sendData({
-            type: "watch-sync",
-            action: "play",
-            time: currentTimeRef.current,
-          });
-          showSyncStatus("▶ Playing");
-        } else if (state === YT_STATE.PAUSED) {
-          sendData({
-            type: "watch-sync",
-            action: "pause",
-            time: currentTimeRef.current,
-          });
-          showSyncStatus("⏸ Paused");
+      if (embedSource === "yt") {
+        // Track current time from info events
+        if (data.event === "infoDelivery" && typeof data.info?.currentTime === "number") {
+          currentTimeRef.current = data.info.currentTime;
         }
-      }
 
-      // Player is ready
-      if (data.event === "onReady") {
-        playerReadyRef.current = true;
+        // Handle state changes
+        if (data.event === "onStateChange" || data.event === "initialDelivery") {
+          const state = data.info;
+          if (typeof state !== "number") return;
+
+          if (isSyncActionRef.current) return;
+          const now = Date.now();
+          if (now - lastSyncTimeRef.current < 500) return;
+
+          if (state === YT_STATE.PLAYING) {
+            sendData({
+              type: "watch-sync",
+              action: "play",
+              time: currentTimeRef.current,
+            });
+            showSyncStatus("▶ Playing");
+          } else if (state === YT_STATE.PAUSED) {
+            sendData({
+              type: "watch-sync",
+              action: "pause",
+              time: currentTimeRef.current,
+            });
+            showSyncStatus("⏸ Paused");
+          }
+        }
+
+        // Player is ready
+        if (data.event === "onReady") {
+          playerReadyRef.current = true;
+        }
       }
     };
 
-    window.addEventListener("message", handleMessage);
+    // Guard: only attach the listener once per effect lifecycle
+    if (!messageListenerAttachedRef.current) {
+      window.addEventListener("message", handleMessage);
+      messageListenerAttachedRef.current = true;
+    }
 
     // Start listening to the iframe once it loads
     const startListening = () => {
@@ -149,12 +212,13 @@ export const WatchModeOverlay: React.FC<WatchModeOverlayProps> = ({
         iframe.removeEventListener("load", startListening);
       }
       playerReadyRef.current = false;
+      messageListenerAttachedRef.current = false;
     };
-  }, [watchVideoId, sendData]);
+  }, [watchVideoId, sendData, embedSource, showSyncStatus]);
 
   /* ── Handle incoming sync messages from peer ────────────────────────── */
   useEffect(() => {
-    if (!syncMessage || !playerReadyRef.current) return;
+    if (!syncMessage || !playerReadyRef.current || embedSource !== "yt") return;
 
     isSyncActionRef.current = true;
     lastSyncTimeRef.current = Date.now();
@@ -187,7 +251,7 @@ export const WatchModeOverlay: React.FC<WatchModeOverlayProps> = ({
     setTimeout(() => {
       isSyncActionRef.current = false;
     }, 800);
-  }, [syncMessage, sendYTCommand]);
+  }, [syncMessage, sendYTCommand, embedSource]);
 
   // Sync external video id (from remote peer)
   useEffect(() => {
@@ -197,23 +261,15 @@ export const WatchModeOverlay: React.FC<WatchModeOverlayProps> = ({
     }
   }, [externalVideoId]);
 
-  /* ── Sync status toast ──────────────────────────────────────────────── */
-  const syncStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const showSyncStatus = useCallback((msg: string) => {
-    setSyncStatus(msg);
-    if (syncStatusTimer.current) clearTimeout(syncStatusTimer.current);
-    syncStatusTimer.current = setTimeout(() => setSyncStatus(null), 2000);
-  }, []);
-
   // Reactive remote stream
-  const [activeRemoteStream, setActiveRemoteStream] = useState<
-    MediaStream | MediaSource | null
-  >(remoteVideoSrcObject ?? null);
+  const [activeRemoteStream, setActiveRemoteStream] = useState<VideoSrcObject>(
+    remoteVideoSrcObject ?? null,
+  );
 
   // Reactive local stream
-  const [activeLocalStream, setActiveLocalStream] = useState<
-    MediaStream | MediaSource | null
-  >(localStream ?? null);
+  const [activeLocalStream, setActiveLocalStream] = useState<VideoSrcObject>(
+    localStream ?? null,
+  );
 
   useEffect(() => {
     if (remoteVideoSrcObject) setActiveRemoteStream(remoteVideoSrcObject);
@@ -223,31 +279,31 @@ export const WatchModeOverlay: React.FC<WatchModeOverlayProps> = ({
     if (localStream) setActiveLocalStream(localStream);
   }, [localStream]);
 
-  // Poll the page-level <video> elements
+  // Poll the page-level <video> elements — only update when stream identity changes
+  const lastRemoteStreamRef = useRef<VideoSrcObject>(null);
+  const lastLocalStreamRef = useRef<VideoSrcObject>(null);
+
   useEffect(() => {
     const check = () => {
       if (pageRemoteVideoRef?.current) {
         const rSrc = pageRemoteVideoRef.current.srcObject;
-        if (rSrc && rSrc !== activeRemoteStream) {
-          setActiveRemoteStream(rSrc as MediaStream | MediaSource);
+        if (rSrc && rSrc !== lastRemoteStreamRef.current) {
+          lastRemoteStreamRef.current = rSrc as VideoSrcObject;
+          setActiveRemoteStream(rSrc as VideoSrcObject);
         }
       }
       if (pageLocalVideoRef?.current) {
         const lSrc = pageLocalVideoRef.current.srcObject;
-        if (lSrc && lSrc !== activeLocalStream) {
-          setActiveLocalStream(lSrc as MediaStream | MediaSource);
+        if (lSrc && lSrc !== lastLocalStreamRef.current) {
+          lastLocalStreamRef.current = lSrc as VideoSrcObject;
+          setActiveLocalStream(lSrc as VideoSrcObject);
         }
       }
     };
     check();
-    const id = setInterval(check, 500);
+    const id = setInterval(check, 1000);
     return () => clearInterval(id);
-  }, [
-    pageRemoteVideoRef,
-    pageLocalVideoRef,
-    activeRemoteStream,
-    activeLocalStream,
-  ]);
+  }, [pageRemoteVideoRef, pageLocalVideoRef]);
 
   // Attach streams to video elements
   useEffect(() => {
@@ -264,15 +320,16 @@ export const WatchModeOverlay: React.FC<WatchModeOverlayProps> = ({
   }, [activeLocalStream, activeRemoteStream]);
 
   /* ── Search YouTube via Invidious ────────────────────────────────────── */
-  const handleWatchSearch = useCallback(async () => {
-    if (!watchSearchQuery.trim()) return;
+  const handleWatchSearch = useCallback(async (query?: string) => {
+    const searchQuery = (query ?? watchSearchQuery).trim();
+    if (!searchQuery) return;
     setIsWatchSearching(true);
     try {
-      const res = await fetch(
-        `https://vid.puffyan.us/api/v1/search?q=${encodeURIComponent(watchSearchQuery)}&type=video&page=1`,
+      const res = await fetchFromInvidious(
+        `search?q=${encodeURIComponent(searchQuery)}&type=video&page=1`,
         { headers: { Accept: "application/json" } },
       );
-      if (res.ok) {
+      if (res) {
         const data = await res.json();
         setWatchSearchResults(
           data.slice(0, 8).map((item: any) => ({
@@ -287,28 +344,12 @@ export const WatchModeOverlay: React.FC<WatchModeOverlayProps> = ({
           })) as WatchVideoResult[],
         );
       } else {
-        const res2 = await fetch(
-          `https://inv.nadeko.net/api/v1/search?q=${encodeURIComponent(watchSearchQuery)}&type=video&page=1`,
-          { headers: { Accept: "application/json" } },
-        );
-        if (res2.ok) {
-          const data2 = await res2.json();
-          setWatchSearchResults(
-            data2.slice(0, 8).map((item: any) => ({
-              videoId: item.videoId,
-              title: item.title,
-              channel: item.author,
-              thumbnail:
-                item.videoThumbnails?.[4]?.url ||
-                item.videoThumbnails?.[0]?.url ||
-                "",
-              duration: item.lengthSeconds,
-            })) as WatchVideoResult[],
-          );
-        }
+        console.warn("All Invidious instances failed for search");
+        setWatchSearchResults([]);
       }
     } catch (err) {
       console.warn("Watch search error:", err);
+      setWatchSearchResults([]);
     }
     setIsWatchSearching(false);
   }, [watchSearchQuery]);
@@ -347,22 +388,28 @@ export const WatchModeOverlay: React.FC<WatchModeOverlayProps> = ({
       <button
         style={{
           ...styles.watchCloseBtn,
+          position: "fixed",
+          top: "20px",
+          right: "20px",
           width: "auto",
-          padding: "0 16px",
+          padding: "10px 20px",
           gap: "8px",
-          background: "rgba(220, 38, 38, 0.2)",
-          color: "#fca5a5",
-          borderColor: "rgba(220, 38, 38, 0.3)",
-          zIndex: 50,
+          background: isExitButtonHovered ? "rgba(239, 68, 68, 1)" : "rgba(220, 38, 38, 0.9)",
+          color: "#fff",
+          border: "1px solid rgba(255, 255, 255, 0.3)",
+          borderRadius: "999px",
+          zIndex: 9999,
+          boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          transform: isExitButtonHovered ? "scale(1.05)" : "scale(1)",
+          transition: "all 0.2s ease"
         }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "rgba(220, 38, 38, 0.4)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "rgba(220, 38, 38, 0.2)";
-        }}
+        onMouseEnter={() => setIsExitButtonHovered(true)}
+        onMouseLeave={() => setIsExitButtonHovered(false)}
         onClick={onClose}
-        title="Close Watch Mode"
+        title="Exit Watch Mode"
       >
         <svg
           viewBox="0 0 24 24"
@@ -375,7 +422,7 @@ export const WatchModeOverlay: React.FC<WatchModeOverlayProps> = ({
           <line x1="18" y1="6" x2="6" y2="18" />
           <line x1="6" y1="6" x2="18" y2="18" />
         </svg>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>Close Watch Mode</span>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>Exit Watch</span>
       </button>
 
       {/* Sync status indicator */}
@@ -466,18 +513,14 @@ export const WatchModeOverlay: React.FC<WatchModeOverlayProps> = ({
               {watchSearchResults.map((result: WatchVideoResult) => (
                 <div
                   key={result.videoId}
-                  style={styles.watchSearchResultItem}
+                  style={{
+                    ...styles.watchSearchResultItem,
+                    background: hoveredResultId === result.videoId ? "rgba(255,255,255,0.08)" : "transparent",
+                    transition: "background 0.15s ease"
+                  }}
                   onClick={() => handleSelectVideo(result.videoId)}
-                  onMouseEnter={(e) => {
-                    (
-                      e.currentTarget as HTMLDivElement
-                    ).style.background = "rgba(255,255,255,0.08)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (
-                      e.currentTarget as HTMLDivElement
-                    ).style.background = "transparent";
-                  }}
+                  onMouseEnter={() => setHoveredResultId(result.videoId)}
+                  onMouseLeave={() => setHoveredResultId(null)}
                 >
                   <img
                     src={result.thumbnail}
@@ -506,19 +549,79 @@ export const WatchModeOverlay: React.FC<WatchModeOverlayProps> = ({
         <div style={styles.watchIframeContainer}>
           {watchVideoId ? (
             <>
-              <iframe
-                ref={iframeRef}
-                key={`${watchVideoId}-${embedSource}`}
-                style={styles.watchIframe}
-                src={
-                  embedSource === "inv"
-                    ? `https://vid.puffyan.us/embed/${watchVideoId}?autoplay=1&quality=dash`
-                    : `https://www.youtube-nocookie.com/embed/${watchVideoId}?autoplay=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`
-                }
-                title="YouTube"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+              {iframeError ? (
+                <div style={{
+                  ...styles.watchPlaceholder,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="rgba(239, 68, 68, 0.6)"
+                    strokeWidth="2"
+                    style={{ width: 48, height: 48, marginBottom: 16 }}
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <h3 style={{ ...styles.watchPlaceholderTitle, color: "#fca5a5" }}>
+                    Player Unavailable
+                  </h3>
+                  <p style={{ ...styles.watchPlaceholderSubtitle, color: "rgba(255,255,255,0.6)" }}>
+                    {iframeError}
+                  </p>
+                  <button
+                    onClick={() => {
+                      setIframeError(null);
+                      // Force iframe reload by toggling embedSource temporarily
+                      const current = embedSource;
+                      setEmbedSource(current === "inv" ? "yt" : "inv");
+                      setTimeout(() => {
+                        setEmbedSource(current);
+                        sessionStorage.setItem("vc_embed_src", current);
+                      }, 100);
+                    }}
+                    style={{
+                      marginTop: 16,
+                      padding: "8px 20px",
+                      background: "rgba(59, 130, 246, 0.2)",
+                      border: "1px solid rgba(59, 130, 246, 0.4)",
+                      borderRadius: 8,
+                      color: "#93c5fd",
+                      cursor: "pointer",
+                      fontSize: 13,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Retry / Switch Source
+                  </button>
+                </div>
+              ) : (
+                <iframe
+                  ref={iframeRef}
+                  key={`${watchVideoId}-${embedSource}`}
+                  style={styles.watchIframe}
+                  src={
+                    embedSource === "inv"
+                      ? `https://vid.puffyan.us/embed/${watchVideoId}?autoplay=1&quality=dash`
+                      : `https://www.youtube-nocookie.com/embed/${watchVideoId}?autoplay=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`
+                  }
+                  title="YouTube"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  onError={() => {
+                    setIframeError(
+                      embedSource === "inv"
+                        ? "The Invidious player is currently unavailable. Try switching to YouTube."
+                        : "The YouTube player failed to load. Try switching to Invidious."
+                    );
+                  }}
+                />
+              )}
               {/* Source switcher */}
               <button
                 onClick={() => {

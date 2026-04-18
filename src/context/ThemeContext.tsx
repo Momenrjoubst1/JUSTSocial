@@ -8,7 +8,7 @@ interface ThemeContextType {
   toggleTheme: () => void;
 }
 
-const THEME_STORAGE_KEY = "skillswap_theme";
+const THEME_STORAGE_KEY = "justsocial_theme";
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 

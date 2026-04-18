@@ -6,7 +6,7 @@ import { SEO } from '@/components/ui/core';
 export default function MessagesPage() {
   return (
     <>
-      <SEO title="Inbox | SkillSwap" description="Chat and exchange skills securely with end-to-end encryption." />
+      <SEO title="Inbox | JUST Social" description="Chat and connect securely with end-to-end encryption." />
       <ChatProvider>
         <ChatLayout />
       </ChatProvider>

@@ -56,7 +56,7 @@ export function useVideoPinning(enabled: boolean = true): UseVideoPinningReturn 
       setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
       try {
         (e.target as Element).setPointerCapture(e.pointerId);
-      } catch (_) {}
+      } catch (e) { console.warn("Cleaned up error:", e); }
     },
     [isPinned, enabled],
   );
@@ -133,3 +133,4 @@ export function useVideoPinning(enabled: boolean = true): UseVideoPinningReturn 
     togglePin,
   };
 }
+

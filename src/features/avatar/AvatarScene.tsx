@@ -161,8 +161,12 @@ export function AvatarScene({ isEnabled, onToggle, room, isCameraEnabled }: Avat
     if (!worker || !video || !mgr) return;
 
     // Listen for results from the worker
+    let isWorkerBusy = false;
+    let lastFrameTime = 0;
+
     const handler = (e: MessageEvent<WorkerResult>) => {
       if (e.data.type !== "RESULTS") return;
+      isWorkerBusy = false;
       if (e.data.blendshapes) mgr.updateBlendshapes(e.data.blendshapes);
       if (e.data.matrix) mgr.updateHeadRotation(e.data.matrix);
     };
@@ -177,8 +181,14 @@ export function AvatarScene({ isEnabled, onToggle, room, isCameraEnabled }: Avat
       const dt = (now - prevClockRef.current) / 1000;
       prevClockRef.current = now;
 
-      // send frame to worker
-      if (video.readyState >= 2) {
+      // Update VRM independently of worker framerate
+      mgr.update(dt);
+
+      // Throttling logic + Busy lock
+      // Only process max ~30fps to save resources (1000/30 = ~33.3ms)
+      if (!isWorkerBusy && video.readyState >= 2 && now - lastFrameTime > 33) {
+        isWorkerBusy = true;
+        lastFrameTime = now;
         createImageBitmap(video)
           .then((bmp) => {
             worker.postMessage(
@@ -186,10 +196,11 @@ export function AvatarScene({ isEnabled, onToggle, room, isCameraEnabled }: Avat
               [bmp],
             );
           })
-          .catch(() => {/* skip */});
+          .catch(() => {
+             isWorkerBusy = false;
+          });
       }
 
-      mgr.update(dt);
       rafRef.current = requestAnimationFrame(loop);
     };
 

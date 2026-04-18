@@ -47,7 +47,7 @@ const GooeyNav = ({
                     if (element.contains(bolt)) {
                         element.removeChild(bolt);
                     }
-                } catch (e) {}
+                } catch (e) { console.warn("Cleaned up error:", e); }
             }, 500 + delay);
         }
     };
@@ -150,3 +150,4 @@ const GooeyNav = ({
 };
 
 export default GooeyNav;
+

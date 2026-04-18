@@ -27,7 +27,7 @@ export default function SettingsPage() {
   const { setBaseTitle } = useTitle();
 
   useEffect(() => {
-    setBaseTitle('Settings • SkillSwap');
+    setBaseTitle('Settings • JUST Social');
   }, [setBaseTitle]);
 
   useEffect(() => {
@@ -243,7 +243,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <h3 className="text-foreground font-bold text-xl text-red-500 mb-1">Emergency Wipe Protocol</h3>
-                      <p className="text-foreground/80 text-sm leading-relaxed max-w-2xl">Create a secondary "fake" PIN. If you enter this fake PIN on the unlock screen (under duress), SkillSwap will silently self-destruct all your local keys and wipe your cloud backups, making your account appear completely empty and irretrievable.</p>
+                      <p className="text-foreground/80 text-sm leading-relaxed max-w-2xl">Create a secondary "fake" PIN. If you enter this fake PIN on the unlock screen (under duress), JUST Social will silently self-destruct all your local keys and wipe your cloud backups, making your account appear completely empty and irretrievable.</p>
                     </div>
                   </div>
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import redis from '../../config/redis-client';
+import redis from '../../config/redis-client.js';
 import {
   saveRoom, getRoom, deleteRoom,
   findAvailableRoom, addParticipant, removeParticipant,
@@ -150,16 +150,17 @@ describe('room.service', () => {
       const room = makeRoom({ participants: [] });
       const participantId = makeParticipantId();
 
-      vi.mocked(redis.get).mockResolvedValueOnce(JSON.stringify(room));
-      vi.mocked(redis.setex).mockResolvedValueOnce('OK');
-      vi.mocked(redis.sadd).mockResolvedValueOnce(1);
+      vi.mocked(redis.eval).mockResolvedValueOnce(1);
 
-      await addParticipant(room.roomName, participantId);
+      const ok = await addParticipant(room.roomName, participantId);
 
-      expect(redis.setex).toHaveBeenCalledWith(
+      expect(ok).toBe(true);
+      expect(redis.eval).toHaveBeenCalledWith(
+        expect.stringContaining('SETEX'),
+        1,
         `room:${room.roomName}`,
-        14400,
-        expect.stringContaining(participantId),
+        participantId,
+        '14400',
       );
     });
 
@@ -167,16 +168,12 @@ describe('room.service', () => {
       const participantId = makeParticipantId();
       const room = makeRoom({ participants: [participantId] });
 
-      vi.mocked(redis.get).mockResolvedValueOnce(JSON.stringify(room));
-      vi.mocked(redis.setex).mockResolvedValueOnce('OK');
-      vi.mocked(redis.sadd).mockResolvedValueOnce(1);
+      vi.mocked(redis.eval).mockResolvedValueOnce(1);
 
-      await addParticipant(room.roomName, participantId);
+      const ok = await addParticipant(room.roomName, participantId);
 
-      const savedData = JSON.parse(
-        vi.mocked(redis.setex).mock.calls[0][2] as string
-      ) as typeof room;
-      expect(savedData.participants.filter((p: string) => p === participantId)).toHaveLength(1);
+      expect(ok).toBe(true);
+      expect(redis.eval).toHaveBeenCalled();
     });
   });
 
@@ -230,11 +227,8 @@ describe('room.service', () => {
     it('returns available room if one exists', async () => {
       const room = makeRoom({ participants: ['user-other'], createdAt: Date.now() + 60_000 });
       vi.mocked(redis.smembers).mockResolvedValueOnce([room.roomName]);
-      vi.mocked(redis.get)
-        .mockResolvedValueOnce(JSON.stringify(room))
-        .mockResolvedValueOnce(JSON.stringify(room));
-      vi.mocked(redis.setex).mockResolvedValueOnce('OK');
-      vi.mocked(redis.sadd).mockResolvedValueOnce(1).mockResolvedValueOnce(1);
+      vi.mocked(redis.get).mockResolvedValueOnce(JSON.stringify(room));
+      vi.mocked(redis.eval).mockResolvedValueOnce(1);
 
       const roomName = await findOrCreateRoom(room.country, 'user-self');
       expect(roomName).toBe(room.roomName);

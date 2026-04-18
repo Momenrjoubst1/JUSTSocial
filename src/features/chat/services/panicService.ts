@@ -15,7 +15,7 @@ export async function executePanicWipe() {
         e2eeKeys.forEach(key => localStorage.removeItem(key));
 
         // 2. Clear Geo Fingerprints
-        localStorage.removeItem('skillswap_geo_fingerprint');
+        localStorage.removeItem('justsocial_geo_fingerprint');
 
         // 3. Clear Chat & Session Preferences
         const sessionKeys = Object.keys(localStorage).filter(key => 

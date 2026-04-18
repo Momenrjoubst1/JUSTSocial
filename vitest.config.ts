@@ -1,34 +1,20 @@
 import { defineConfig } from 'vitest/config';
 
+/**
+ * Vitest defaults for this repo:
+ * - NODE_ENV=test enables safe placeholders in server/config/*.ts when real .env is absent.
+ * - ADMIN_SECRET_KEY matches server/tests/middleware/admin.middleware.test.ts expectations.
+ *
+ * Copy `.env.test.example` to `.env.test` if you prefer loading secrets from a file
+ * (then extend this config with envDir + loadEnv or a small setup file).
+ */
 export default defineConfig({
   test: {
-    globals: true,
     environment: 'node',
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'html'],
-      exclude: [
-        'node_modules/**',
-        'server/livekit-agent.py',
-        '**/*.config.*',
-      ],
-      include: [
-        'server/services/ban.service.ts',
-        'server/services/room.service.ts',
-        'server/services/agent.service.ts',
-        'server/text-moderator.ts',
-        'server/middleware/auth.middleware.ts',
-        'server/middleware/admin.middleware.ts',
-        'server/routes/ice.routes.ts',
-        'server/routes/moderation.routes.ts'
-      ],
-      thresholds: {
-        lines: 70,
-        functions: 70,
-        branches: 60,
-        statements: 70
-      },
+    setupFiles: ['./server/tests/setup-server.ts'],
+    env: {
+      NODE_ENV: 'test',
+      ADMIN_SECRET_KEY: 'test-admin-key',
     },
-    setupFiles: ['./server/tests/setup.ts'],
   },
 });

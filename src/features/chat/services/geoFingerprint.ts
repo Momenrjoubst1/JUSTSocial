@@ -1,6 +1,6 @@
 /**
  * 🌍 geoFingerprint.ts
- * Advanced Geographic Fingerprinting Service for SkillSwap.
+ * Advanced Geographic Fingerprinting Service for JUST Social.
  * Uses lightweight IP-based geolocation to verify session stability.
  */
 
@@ -13,8 +13,8 @@ export interface GeoData {
     org: string;
 }
 
-const GEO_STORAGE_KEY = 'skillswap_geo_fingerprint';
-const GEO_TRUSTED_KEY = 'skillswap_geo_trusted';
+const GEO_STORAGE_KEY = 'justsocial_geo_fingerprint';
+const GEO_TRUSTED_KEY = 'justsocial_geo_trusted';
 
 /**
  * Fetch approximate location data using a public API.

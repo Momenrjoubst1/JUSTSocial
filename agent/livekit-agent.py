@@ -290,6 +290,15 @@ async def run_agent(room_name: str):
             logger.error(f"❌ Error: {e}")
         finally:
             if room.isconnected(): await room.disconnect()
+            import gc
+            gc.collect()
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    logger.info("Cleared PyTorch GPU cache to prevent memory leaks.")
+            except ImportError:
+                pass
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

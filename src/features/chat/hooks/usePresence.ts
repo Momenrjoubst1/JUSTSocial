@@ -145,7 +145,10 @@ export function usePresence() {
                 if (payload.eventType === 'INSERT') {
                     let decryptedText = await decryptHybridMessage(privateKey, user.id, m.sender_id, m.encrypted_content);
                     
-                    if (decryptedText.includes("فشل") || decryptedText.includes("Corrupted")) {
+                    if (decryptedText === "🔒 [فشل فك التشفير - Decryption Failed]" || decryptedText === "🔒 [بيانات تالفة - Data Corrupted]") {
+                        // لا تحاول فك التشفير مراراً وتكراراً للرسائل التالفة القديمة
+                        decryptedText = decryptedText;
+                    } else if (decryptedText.includes("فشل") || decryptedText.includes("Corrupted")) {
                         const { data: keyData } = await supabase.from('user_public_keys').select('public_key').eq('user_id', m.sender_id).maybeSingle();
                         if (keyData) decryptedText = await decryptHybridMessage(privateKey, user.id, m.sender_id, m.encrypted_content);
                     }

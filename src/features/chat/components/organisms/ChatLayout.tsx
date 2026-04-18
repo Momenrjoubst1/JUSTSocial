@@ -1,14 +1,28 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useChat } from '../../hooks/useChat';
 // ✅ تم تعديل هذا الجزء ليستورد الملفات الموجودة بجانبه في نفس المجلد
 import { ChatSidebar } from './ChatSidebar';
 import { ChatWindow } from './ChatWindow';
 import { ForwardModal } from './ForwardModal';
+import { SmartTour } from './SmartTour';
+import { AnimatePresence } from 'framer-motion';
 
 export const ChatLayout: React.FC = () => {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
+    const [showTour, setShowTour] = useState(false);
+
+    useEffect(() => {
+        const hasSeenTour = localStorage.getItem('skillswap_tour_seen');
+        // ALWAYS show tour for testing purposes as user requested
+        setShowTour(true);
+    }, []);
+
+    const completeTour = () => {
+        localStorage.setItem('skillswap_tour_seen', 'true');
+        setShowTour(false);
+    };
 
     /* منع التمرير في الخلفية عند فتح الشات */
     useEffect(() => {
@@ -41,6 +55,15 @@ export const ChatLayout: React.FC = () => {
             <ChatSidebar isDark={isDark} />
             <ChatWindow />
             <ForwardModal />
+
+            <AnimatePresence>
+                {showTour && (
+                    <SmartTour
+                        isDark={isDark}
+                        onComplete={completeTour}
+                    />
+                )}
+            </AnimatePresence>
 
             {/* Scrollbar CSS */}
             <style dangerouslySetInnerHTML={{

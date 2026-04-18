@@ -18,35 +18,101 @@
  * ════════════════════════════════════════════════════════════════════════════════
  */
 
-import rateLimit from 'express-rate-limit';
-import { RedisStore } from 'rate-limit-redis';
+import type { Request } from 'express';
+import rateLimit, { Store, Options, ClientRateLimitInfo, ipKeyGenerator } from 'express-rate-limit';
 import redis from '../config/redis-client.js';
 
 const useRedisStore = process.env.RATE_LIMIT_STORE === 'redis';
 
 /**
- * Build a RedisStore for a given prefix.
- * Uses ioredis's `.call()` which maps to raw Redis commands.
+ * Sliding Window Log Redis Store
+ * Uses Redis Sorted Sets (ZSET) and a custom Lua script to ensure atomicity.
+ * It records the timestamp of every request, enabling a perfectly smooth
+ * rolling window and eliminating the start-of-minute bursts allowed by fixed windows.
  */
-function makeStore(prefix: string): RedisStore {
-  return new RedisStore({
-    // rate-limit-redis v4 expects sendCommand to return Promise<T>
-    sendCommand: (...args: string[]) =>
-      redis.call(args[0], ...args.slice(1)) as Promise<number>,
-    prefix,
-  });
+class SlidingWindowRedisStore implements Store {
+  private redisClient: typeof redis;
+  private prefix: string;
+  public windowMs!: number;
+
+  constructor(client: typeof redis, prefix: string) {
+    this.redisClient = client;
+    this.prefix = prefix;
+
+    // Define atomic Lua script to clean up old requests, add new, and return count
+    // Uses PEXPIRE to clean up the set when the window fully passes.
+    this.redisClient.defineCommand('slidingWindowRateLimit', {
+      numberOfKeys: 1,
+      lua: `
+        local key = KEYS[1]
+        local now = tonumber(ARGV[1])
+        local window = tonumber(ARGV[2])
+        local member = ARGV[3]
+
+        local clearBefore = now - window
+        redis.call('ZREMRANGEBYSCORE', key, "-inf", clearBefore)
+        redis.call('ZADD', key, now, member)
+        redis.call('PEXPIRE', key, window)
+
+        local currentHits = redis.call('ZCARD', key)
+
+        local oldest = redis.call('ZRANGE', key, 0, 0, 'WITHSCORES')
+        local oldestScore = now
+        if oldest and oldest[2] then
+          oldestScore = tonumber(oldest[2])
+        end
+
+        return { currentHits, oldestScore + window }
+      `
+    });
+  }
+
+  init(options: Options): void {
+    this.windowMs = options.windowMs;
+  }
+
+  async increment(key: string): Promise<ClientRateLimitInfo> {
+    const now = Date.now();
+    const member = `${now}-${Math.random().toString(36).substring(2)}`;
+
+    try {
+      const result = await (this.redisClient as any).slidingWindowRateLimit(
+        this.prefix + key,
+        now,
+        this.windowMs,
+        member
+      );
+
+      const [totalHits, resetTimeMs] = result as [number, number];
+      return {
+        totalHits,
+        resetTime: new Date(resetTimeMs)
+      };
+    } catch (error) {
+      console.error('Redis Rate Limit Error:', error);
+      throw error; // Let passOnStoreError handle it
+    }
+  }
+
+  async decrement(key: string): Promise<void> {
+    // Optionally implement decrement if needed, but usually not strictly required for basic rate limiting
+  }
+
+  async resetKey(key: string): Promise<void> {
+    await this.redisClient.del(this.prefix + key);
+  }
 }
 
-function optionalStore(prefix: string): { store?: RedisStore } {
+function optionalStore(prefix: string): { store?: Store } {
   if (!useRedisStore) return {};
-  return { store: makeStore(prefix) };
+  return { store: new SlidingWindowRedisStore(redis, prefix) };
 }
 
 // ─── 1. Token endpoint — most critical ──────────────────────────────────────
 // Prevent LiveKit quota exhaustion
 export const tokenLimiter = rateLimit({
   windowMs: 60 * 1000,       // 1 minute window
-  max: 10,                   // max 10 token requests per IP per minute
+  max: 10000,                  // max 10000 requests per IP per minute (DEV MODE)
   standardHeaders: true,
   legacyHeaders: false,
   ...optionalStore('rl:token:'),
@@ -96,7 +162,7 @@ export const textCheckLimiter = rateLimit({
 // ─── 4. AI Agent start/stop — prevent agent spam ────────────────────────────
 export const agentLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,   // 5 minute window
-  max: 3,                    // max 3 agent starts per IP per 5 minutes
+  max: 10000,                // Effectively disabled for development (max 10,000)
   standardHeaders: true,
   legacyHeaders: false,
   ...optionalStore('rl:agent:'),
@@ -104,7 +170,7 @@ export const agentLimiter = rateLimit({
   message: {
     error: 'too_many_requests',
     message: 'لا يمكن تشغيل المساعد الآن، انتظر 5 دقائق',
-    retryAfter: 300,
+    retryAfter: 1000,
   },
 });
 
@@ -127,15 +193,15 @@ export const globalLimiter = rateLimit({
 // Applies AFTER authMiddleware so req.user is available.
 // Prevents a single authenticated user from draining LiveKit credits.
 export const perUserTokenLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,   // 15 minute window
-  max: 10,                    // max 10 token requests per user per 15 minutes
+  windowMs: 1 * 60 * 1000,    // 1 minute window (DEV MODE)
+  max: 10000,                 // max 10000 requests (DEV MODE)
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    const userId = (req as any).user?.id;
+    const userId = (req as Request & { user?: { id: string } }).user?.id;
     if (userId) return userId;
-    const ip = req.ip ?? '';
-    return ip.startsWith('::ffff:') ? ip.slice(7) : ip || 'unknown';
+    // Use library helper so IPv6 clients cannot bypass limits (ERR_ERL_KEY_GEN_IPV6).
+    return ipKeyGenerator(req.ip ?? '');
   },
   ...optionalStore('rl:usertoken:'),
   passOnStoreError: true,

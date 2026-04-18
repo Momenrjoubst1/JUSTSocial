@@ -1,126 +1,135 @@
 /**
  * useAIAgent — Hook for controlling AI Agent in video chat
- * للتحكم بالوكيل الذكي في الفيديو شات (مع دعم الـ Streaming الجديد)
+ * يتصل بالسيرفر المحلي (Express) لتشغيل/إيقاف الوكيل الذكي في الغرفة
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { useAuthRefresh } from "@/features/auth/hooks/useAuthRefresh";
 
-import { UseAIAgentReturn, AgentStreamData } from '../types';
+import { UseAIAgentReturn } from '../types';
 
 export function useAIAgent(): UseAIAgentReturn {
-  const { refreshIfNeeded, fetchWithAuth } = useAuthRefresh();
   const [agentActive, setAgentActive] = useState(false);
   const [agentLoading, setAgentLoading] = useState(false);
   const [agentError, setAgentError] = useState<string | null>(null);
   const [agentMessage, setAgentMessage] = useState<string>('');
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
 
-  // للإلغاء لاحقاً (AbortController) تحسباً لإيقاف الوكيل
   const abortControllerRef = useRef<AbortController | null>(null);
+  const activeRoomRef = useRef<string | null>(null);
+  const activeIdentityRef = useRef<string | null>(null);
 
-  // تنظيف (Cleanup) لمنع تسرب الذاكرة وإيقاف استهلاك الباندويث إذا خرج المستخدم من الصفحة
+  // Helper to stop agent without updating state (for unmount)
+  const signalStop = async (room: string, identity?: string | null) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`;
+      
+      await fetch('/api/agent/stop', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ roomName: room, identity }),
+        keepalive: true // Ensure it goes through even if page is closing
+      });
+    } catch (e) {
+      // Ignore errors on unmount signal
+    }
+  };
+
   useEffect(() => {
     return () => {
+      // Cleanup: stop fetches
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+      }
+      
+      // Prevent zombie agents: if we leave while agent is active, try to kill it
+      if (activeRoomRef.current) {
+        signalStop(activeRoomRef.current, activeIdentityRef.current);
       }
     };
   }, []);
 
-  /* === النسخة القديمة (Express Server) ===
-  const startAgent = useCallback(async (roomName: string) => {
+  /** Helper: get auth headers for Express server */
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     try {
-      setAgentLoading(true);
-      ...
-  });
-  */
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+    } catch (e) {
+      console.warn('Failed to get auth session for agent:', e);
+    }
+    return headers;
+  };
 
-  // === النسخة الجديدة باستخدام Supabase Edge Functions (Streaming) ===
-  const startAgent = useCallback(async (roomName: string) => {
+  const checkAgentStatus = useCallback(async (roomName: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const identity = session?.user?.id;
+      const headers = await getAuthHeaders();
+      
+      const params = new URLSearchParams({ roomName });
+      if (identity) params.append('identity', identity);
+
+      const response = await fetch(`/api/agent/status?${params.toString()}`, {
+        headers,
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAgentActive(!!data.active);
+        if (data.active) {
+          activeRoomRef.current = roomName;
+          activeIdentityRef.current = identity || null;
+        } else {
+          activeRoomRef.current = null;
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to sync agent status:', error);
+    }
+  }, []);
+
+  const startAgent = useCallback(async (roomName: string, context?: Record<string, any>) => {
     try {
       setAgentLoading(true);
       setAgentError(null);
       setAgentMessage('');
-      setAgentActive(true);
 
       abortControllerRef.current = new AbortController();
+      const headers = await getAuthHeaders();
 
-      // استخدام الـ Edge Function החדשה الخاصة بالبث
-      // يمكنك تبديل الرابط برابط Supabase Edge Function الحقيقي في الإنتاج (Production)
-      const edgeFunctionUrl = import.meta.env.VITE_SUPABASE_URL
-        ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-stream`
-        : 'http://localhost:54321/functions/v1/chat-stream';
+      const { data: { session } } = await supabase.auth.getSession();
+      const identity = session?.user?.id;
 
-      // Ensure session is fresh and request stream with automatic retry logic
-      const response = await fetchWithAuth(edgeFunctionUrl, {
+      const response = await fetch('/api/agent/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomName }),
-        signal: abortControllerRef.current.signal
+        headers,
+        body: JSON.stringify({ roomName, identity, context }),
+        signal: abortControllerRef.current.signal,
       });
 
-      if (!response.ok || !response.body) {
-        throw new Error('Failed to start agent stream');
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 429) throw new Error('Server is busy');
+        if (response.status === 409) throw new Error('Agent already running');
+        throw new Error(data.message || data.error || 'Failed to start agent');
       }
 
-      setAgentLoading(false); // تم الرد وبدأ التدفق
-      setIsStreaming(true);
-
-      // معالجة الـ ReadableStream داخل try-catch لالتقاط حالات انقطاع الإنترنت المفاجئ
-      try {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunkText = decoder.decode(value, { stream: true });
-          // معالجة صيغة Server-Sent Events "data: {...}\n\n"
-          const lines = chunkText.split('\n');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.replace('data: ', '').trim()) as AgentStreamData;
-                if (data.done) {
-                  // انتهى تدفق الرسالة
-                  break;
-                }
-                if (data.text) {
-                  setAgentMessage(prev => prev + data.text);
-                }
-              } catch (e) {
-                console.warn("Failed to parse SSE line", line, e);
-              }
-            }
-          }
-        }
-      } catch (streamError: unknown) {
-        if (streamError instanceof Error && streamError.name === 'AbortError') {
-          console.log('⛔ Agent stream aborted during read');
-        } else {
-          console.error('❌ Network error during streaming:', streamError);
-          setAgentError('انقطع الاتصال فجأة أثناء استلام الرسالة، الرجاء التحقق من الإنترنت.');
-        }
-      } finally {
-        setIsStreaming(false);
-      }
-
-      // Collaboration initialized
+      setAgentActive(true);
+      activeRoomRef.current = roomName;
+      activeIdentityRef.current = identity || null;
+      setAgentMessage(data.message || 'Agent is now active');
 
     } catch (error: unknown) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        // Aborted
-      } else {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        setAgentError(message);
-        console.error('❌ Error starting agent:', message);
-      }
+      if (error instanceof Error && error.name === 'AbortError') return;
+      setAgentError(error instanceof Error ? error.message : 'Unknown error');
     } finally {
-      // لا نلغي `agentActive` هنا لأن الوكيل قد يبقى فعالاً في صمت
       setAgentLoading(false);
     }
   }, []);
@@ -129,28 +138,36 @@ export function useAIAgent(): UseAIAgentReturn {
     try {
       setAgentLoading(true);
       setAgentError(null);
-      console.log(`Stopping agent in room: ${roomName}`);
 
-      // إيقاف المتدفق لو كان يعمل
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+
+      const headers = await getAuthHeaders();
+      const { data: { session } } = await supabase.auth.getSession();
+      const identity = session?.user?.id;
+
+      const response = await fetch('/api/agent/stop', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ roomName, identity }),
+        signal: AbortSignal.timeout(5000)
+      });
+
+      if (!response.ok && response.status !== 404) {
+        const data = await response.json();
+        throw new Error(data.message || data.error || 'Failed to stop agent');
       }
 
-      // إذا كنت تريد مناداة السيرفر القديم أو إيقاف السيرفر للتوكن (يمكن إضافة Edge Function أخرى)
-      /* 
-      const response = await fetch('/api/agent/stop', {
-        method: 'POST', ...
-      });
-      */
-
-      // Agent stopped successfully
       setAgentActive(false);
+      activeRoomRef.current = null;
       setAgentMessage('');
 
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      setAgentError(message);
-      console.error('❌ Error stopping agent:', message);
+      if (error instanceof Error && error.name === 'AbortError') {
+        setAgentActive(false);
+        activeRoomRef.current = null;
+      } else {
+        setAgentError(error instanceof Error ? error.message : 'Unknown error');
+      }
     } finally {
       setAgentLoading(false);
     }
@@ -160,9 +177,11 @@ export function useAIAgent(): UseAIAgentReturn {
     agentActive,
     agentLoading,
     agentError,
-    agentMessage, // <- أضفنا الخاصية الجديدة هنا للتجاوب مع Tailwind
-    isStreaming,  // للتحكم بالـ UI
+    agentMessage,
+    isStreaming,
+    setIsStreaming,
     startAgent,
-    stopAgent
+    stopAgent,
+    checkAgentStatus
   };
 }

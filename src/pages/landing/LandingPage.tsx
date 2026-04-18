@@ -1,6 +1,5 @@
-import { RainbowButton } from "@/components/ui/effects";
+import { RainbowButton, StarBackground } from "@/components/ui/effects";
 import React, { lazy, Suspense } from "react";
-const SparklesCore = lazy(() => import("@/components/ui/effects/sparkles").then(m => ({ default: m.SparklesCore })));
 import { Button, ThemeToggle } from "@/components/ui/core";
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -36,15 +35,6 @@ import { TwitterIcon, InstagramIcon, LinkedInIcon, GitHubIcon, Icon as LucideIco
 import { BrandLogo } from "@/components/ui/effects";
 import { ChevronDown, Bell, Star, Send, Lightbulb, Bug, CheckCircle2, ArrowRight, MessageSquare } from "lucide-react";
 
-const featureGradients = [
-  "from-indigo-500 to-blue-600",
-  "from-cyan-500 to-teal-600",
-  "from-purple-500 to-pink-600",
-  "from-amber-500 to-orange-600",
-  "from-emerald-500 to-green-600",
-  "from-rose-500 to-red-600",
-  "from-violet-500 to-fuchsia-600",
-];
 
 import { HeroSection } from "@/features/landing/components/HeroSection";
 import { HowItWorks } from "@/features/landing/components/HowItWorks";
@@ -187,15 +177,19 @@ export function LandingPage({
     if (fbRating === 0) { setFbError("Please select a rating."); return; }
     setFbLoading(true); setFbError("");
     try {
-      const { error } = await supabase.from("feedback").insert({
-        user_id: userId || null,
-        email: userEmail || null,
-        name: userEmail ? userEmail.split("@")[0] : null,
-        category: fbCategory,
-        rating: fbRating,
-        message: fbMessage.trim(),
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId || null,
+          email: userEmail || null,
+          name: userEmail ? userEmail.split("@")[0] : null,
+          category: fbCategory,
+          rating: fbRating,
+          message: fbMessage.trim(),
+        })
       });
-      if (error) throw error;
+      if (!response.ok) throw new Error("API Route Failed");
       setFbSuccess(true);
       setFbMessage(""); setFbRating(0); setFbCategory("general");
       setTimeout(() => {
@@ -210,7 +204,7 @@ export function LandingPage({
   };
 
   useEffect(() => {
-    setBaseTitle('Home • SkillSwap');
+    setBaseTitle('Home • JUST Social');
   }, []);
 
   // Track active section using scroll position
@@ -321,10 +315,10 @@ export function LandingPage({
                 window.location.reload();
               }}
             >
-              <BrandLogo className="w-10 h-12 -mr-1 drop-shadow-[0_0_8px_rgba(0,210,255,0.5)]" />
+              <BrandLogo className="w-10 h-12 -me-1" />
               <div className="flex items-center gap-1">
                 <span className="text-lg font-bold tracking-tight hidden sm:block">
-                  <span className="bg-gradient-to-r from-indigo-400 via-sky-400 to-cyan-300 bg-clip-text text-transparent">Skill</span><span className="text-foreground/90">Swap</span>
+                  <span className="text-foreground font-bold">JUST</span><span className="text-foreground/90 font-medium ms-1">Social</span>
                 </span>
                 <span className="text-[10px] font-semibold text-foreground">BETA</span>
               </div>
@@ -335,28 +329,28 @@ export function LandingPage({
               <a
                 href="#top"
                 onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                className={`text-sm font-medium transition-colors ${activeSection === 'top' ? 'text-primary drop-shadow-[0_0_8px_rgba(0,212,255,0.6)]' : 'text-foreground/80 hover:text-primary'}`}
+                className={`text-sm font-medium transition-colors ${activeSection === 'top' ? 'text-foreground' : 'text-[#525252] hover:text-[#A1A1A1]'}`}
               >
                 {String(t("landing.nav.home"))}
               </a>
               <a
                 href="#features"
                 onClick={(e) => { e.preventDefault(); document.getElementById('features')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
-                className={`text-sm font-medium transition-colors ${activeSection === 'features' ? 'text-primary drop-shadow-[0_0_8px_rgba(0,212,255,0.6)]' : 'text-foreground/80 hover:text-primary'}`}
+                className={`text-sm font-medium transition-colors ${activeSection === 'features' ? 'text-foreground' : 'text-[#525252] hover:text-[#A1A1A1]'}`}
               >
                 {String(t("landing.nav.features"))}
               </a>
               <a
                 href="#community"
                 onClick={(e) => { e.preventDefault(); document.getElementById('community')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
-                className={`text-sm font-medium transition-colors ${activeSection === 'community' ? 'text-primary drop-shadow-[0_0_8px_rgba(0,212,255,0.6)]' : 'text-foreground/80 hover:text-primary'}`}
+                className={`text-sm font-medium transition-colors ${activeSection === 'community' ? 'text-foreground' : 'text-[#525252] hover:text-[#A1A1A1]'}`}
               >
                 {String(t("landing.nav.community"))}
               </a>
               <a
                 href="#about"
                 onClick={(e) => { e.preventDefault(); document.getElementById('about')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
-                className={`text-sm font-medium transition-colors ${activeSection === 'about' ? 'text-primary drop-shadow-[0_0_8px_rgba(0,212,255,0.6)]' : 'text-foreground/80 hover:text-primary'}`}
+                className={`text-sm font-medium transition-colors ${activeSection === 'about' ? 'text-foreground' : 'text-[#525252] hover:text-[#A1A1A1]'}`}
               >
                 {String(t("landing.nav.about"))}
               </a>
@@ -386,6 +380,18 @@ export function LandingPage({
                 {/* Search Bar */}
                 <SearchBar placeholder={String(t("landing.searchPlaceholder"))} />
 
+                {/* Video Chat Button */}
+                <button
+                  onClick={onStartClick}
+                  className="p-2 rounded-full border border-border bg-primary/10 hover:bg-primary/20 text-primary transition-all shadow-sm flex items-center justify-center relative cursor-pointer"
+                  title={String(t("landing.nav.videochat") || "مكالمة فيديو")}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/>
+                    <rect x="2" y="6" width="14" height="12" rx="2.5"/>
+                  </svg>
+                </button>
+
                 {/* Messages Button (Icon) */}
                 <div className="relative group/message z-50">
                   <button
@@ -402,7 +408,7 @@ export function LandingPage({
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           exit={{ scale: 0 }}
-                          className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full border-2 border-background flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                          className="absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 bg-primary text-primary-foreground text-[10px] font-bold rounded-full border-2 border-background flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
                         >
                           {unreadCount > 99 ? '99+' : unreadCount}
                         </motion.span>
@@ -446,7 +452,7 @@ export function LandingPage({
                                   }
                                 }}
                                 exit={{ opacity: 0, scale: 0, x: 0, y: 0 }}
-                                className="absolute left-1/2 top-1/2 -ml-3 -mt-3 w-6 h-6 rounded-full border border-primary/50 bg-background shadow-xl overflow-hidden pointer-events-auto cursor-pointer flex items-center justify-center transform-gpu"
+                                className="absolute start-1/2 top-1/2 -ms-3 -mt-3 w-6 h-6 rounded-full border border-primary/50 bg-background shadow-xl overflow-hidden pointer-events-auto cursor-pointer flex items-center justify-center transform-gpu"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (onSenderClick) onSenderClick(sender.id);
@@ -479,12 +485,12 @@ export function LandingPage({
                         exit={{ opacity: 0, y: 15, scale: 0.9, filter: "blur(4px)", pointerEvents: "none" }}
                         transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
                         onClick={onMessagesClick}
-                        className="absolute top-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-56 md:w-64 bg-card border border-primary/30 p-2.5 rounded-2xl shadow-2xl backdrop-blur-xl cursor-pointer shadow-[0_8px_30px_rgb(0,0,0,0.15)]"
+                        className="absolute top-[calc(100%+8px)] start-1/2 -translate-x-1/2 w-56 md:w-64 bg-card border border-primary/30 p-2.5 rounded-2xl shadow-2xl backdrop-blur-xl cursor-pointer shadow-[0_8px_30px_rgb(0,0,0,0.15)]"
                         style={{ transformOrigin: "top center" }}
                       >
                         {/* Small arrow pointing up to the icon */}
-                        <div className="absolute -top-[14px] left-1/2 -translate-x-1/2 border-[7px] border-transparent border-b-primary/30" />
-                        <div className="absolute -top-[13px] left-1/2 -translate-x-1/2 border-[7.5px] border-transparent border-b-card" />
+                        <div className="absolute -top-[14px] start-1/2 -translate-x-1/2 border-[7px] border-transparent border-b-primary/30" />
+                        <div className="absolute -top-[13px] start-1/2 -translate-x-1/2 border-[7.5px] border-transparent border-b-card" />
 
                         <div className="flex items-start gap-2.5 w-full">
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0 border border-primary/10">
@@ -503,7 +509,7 @@ export function LandingPage({
                             initial={{ x: "-100%" }}
                             animate={{ x: "0%" }}
                             transition={{ duration: 5, ease: "linear" }}
-                            className="h-full w-full bg-gradient-to-r from-cyan-400 via-primary to-indigo-500"
+                            className="h-full w-full bg-gradient-to-r from-[#262626] via-[#A1A1A1] to-[#262626]"
                           />
                         </div>
                       </motion.div>
@@ -526,7 +532,7 @@ export function LandingPage({
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           exit={{ scale: 0 }}
-                          className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-background flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                          className="absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-background flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
                         >
                           {notificationCount > 99 ? '99+' : notificationCount}
                         </motion.span>
@@ -571,7 +577,7 @@ export function LandingPage({
                                   }
                                 }}
                                 exit={{ opacity: 0, scale: 0, x: 0, y: 0 }}
-                                className="absolute left-1/2 top-1/2 -ml-3 -mt-3 w-6 h-6 rounded-full border border-red-500/50 bg-background shadow-lg overflow-hidden pointer-events-auto cursor-pointer flex items-center justify-center transform-gpu"
+                                className="absolute start-1/2 top-1/2 -ms-3 -mt-3 w-6 h-6 rounded-full border border-red-500/50 bg-background shadow-lg overflow-hidden pointer-events-auto cursor-pointer flex items-center justify-center transform-gpu"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setShowNotifPanel(true);
@@ -633,7 +639,7 @@ export function LandingPage({
                   {/* Profile Menu Dropdown */}
                   {showProfileMenu && (
                     <>
-                      <div className="absolute top-full right-0 mt-2 z-50">
+                      <div className="absolute top-full end-0 mt-2 z-50">
                         <ProfileMenu
                           onProfileClick={() => {
                             onProfileClick();
@@ -672,27 +678,17 @@ export function LandingPage({
         />
       </header >
 
-      {/* Subtle ambient lighting effects for space theme */}
-      < div
-        className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] blur-[100px] opacity-40 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, transparent 70%)",
-        }}
+      {/* --- Global Animated Star Background --- */}
+      <StarBackground />
+
+      {/* Subtle ambient lighting — dark, no color bleed */}
+      <div
+        className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] blur-[120px] opacity-20 pointer-events-none"
+        style={{ background: "radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%)" }}
       />
-      < div
-        className="fixed bottom-[-10%] right-[-10%] w-[600px] h-[600px] blur-[120px] opacity-35 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(147, 51, 234, 0.35) 0%, transparent 70%)",
-        }}
-      />
-      < div
-        className="fixed top-[40%] right-[20%] w-[400px] h-[400px] blur-[90px] opacity-30 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(34, 211, 238, 0.25) 0%, transparent 70%)",
-        }}
+      <div
+        className="fixed bottom-[-10%] right-[-10%] w-[600px] h-[600px] blur-[140px] opacity-15 pointer-events-none"
+        style={{ background: "radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%)" }}
       />
 
       <HeroSection 

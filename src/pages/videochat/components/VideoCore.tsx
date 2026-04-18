@@ -1,5 +1,5 @@
 import { ElasticSlider } from "@/components/ui/shared";
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, memo } from "react";
 import { styles } from "@/pages/videochat/VideoChatPage.styles";
 import { Avatar, VerifiedBadge, isUserVerified } from "@/components/ui/core";
 import type { UseVideoPageStateReturn } from "@/pages/videochat/hooks/useVideoPageState";
@@ -9,6 +9,9 @@ import { FeaturePanel } from "./FeaturePanel";
 import { ControlBar } from "./ControlBar";
 import { ChatInputBar } from "./ChatInputBar";
 import { StatusBar } from "./StatusBar";
+import { AgentConversationOverlay } from "./AgentConversationOverlay";
+import { LocalTranslationOverlay } from "./LocalTranslationOverlay";
+import { useLocalTranslation } from "@/pages/videochat/hooks/useLocalTranslation";
 
 const WatchModeOverlay = lazy(() => import("@/features/watch-mode").then((module) => ({ default: module.WatchModeOverlay })));
 const AvatarScene = lazy(() => import("@/features/avatar").then((module) => ({ default: module.AvatarScene })));
@@ -16,8 +19,61 @@ const InfiniteMenu = lazy(() => import("@/components/ui/navigation").then((modul
 const EnhancedIDE = lazy(() => import("@/features/code-editor").then((module) => ({ default: module.EnhancedIDE })));
 const WhiteboardOverlay = lazy(() => import("@/features/whiteboard").then((module) => ({ default: module.WhiteboardOverlay })));
 
-export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: any }) {
-  const { chess, ai, ...coreState } = state;
+interface MessageBubbleProps {
+  avatarSrc?: string;
+  avatarName: string;
+  displayName: string;
+  isVerified: boolean;
+  messageText: string;
+  style: React.CSSProperties;
+}
+
+const RemoteMessageBubble = memo(function RemoteMessageBubble({
+  avatarSrc,
+  avatarName,
+  displayName,
+  isVerified,
+  messageText,
+  style,
+}: MessageBubbleProps) {
+  return (
+    <div style={style}>
+      <Avatar src={avatarSrc} name={avatarName} size={26} loading="lazy" decoding="async" />
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", gap: 3 }}>
+          {displayName}
+          {isVerified && <VerifiedBadge size={12} />}
+        </span>
+        <span style={{ fontSize: 13, color: "#fff" }}>{messageText}</span>
+      </div>
+    </div>
+  );
+});
+
+const LocalMessageBubble = memo(function LocalMessageBubble({
+  avatarSrc,
+  avatarName,
+  displayName,
+  isVerified,
+  messageText,
+  style,
+}: MessageBubbleProps) {
+  return (
+    <div style={style}>
+      <Avatar src={avatarSrc} name={avatarName} size={26} loading="lazy" decoding="async" />
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", gap: 3 }}>
+          {displayName}
+          {isVerified && <VerifiedBadge size={12} />}
+        </span>
+        <span style={{ fontSize: 13, color: "#fff" }}>{messageText}</span>
+      </div>
+    </div>
+  );
+});
+
+export const VideoCore = memo(function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: any; aiBubbles?: {id: string; text: string; done?: boolean}[], userBubbles?: {id: string; text: string; done: boolean}[] }) {
+  const { chess, ai, aiBubbles = [], userBubbles = [], ...coreState } = state;
   const {
     t,
     onExit,
@@ -78,6 +134,7 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
     statusMessage,
     connected,
     cameraMuted,
+    audioMuted,
     remoteCameraMuted,
     isSearching,
     remotePeerIdentity,
@@ -89,6 +146,7 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
 
     sendData,
     handleToggleCamera,
+    handleToggleAudio,
 
     messages,
     messageInput,
@@ -110,9 +168,50 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
     handleVolumeChange,
 
     handleSkip,
+    handleToggleSearch,
     handleExit,
     dotColor,
   } = coreState;
+
+  const [aiFlash, setAiFlash] = React.useState(false);
+  const prevAiActive = React.useRef(ai?.isActive);
+
+  React.useEffect(() => {
+    if (ai?.isActive && !prevAiActive.current) {
+        setAiFlash(true);
+        const timer = setTimeout(() => setAiFlash(false), 1000);
+        return () => clearTimeout(timer);
+    }
+    prevAiActive.current = ai?.isActive;
+  }, [ai?.isActive]);
+
+  const {
+    isEnabled: isLocalTranslationEnabled,
+    isBusy: isLocalTranslationBusy,
+    lines: localTranslationLines,
+    errorMessage: localTranslationError,
+    toggleTranslation: toggleLocalTranslation,
+  } = useLocalTranslation({ isRoomActive: connected });
+
+  const localVideoContainerStyle: React.CSSProperties = {
+      ...styles.videoWrapper,
+      position: "relative",
+      overflow: "hidden",
+      transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+      border: ai?.isActive ? "2px solid rgba(255, 255, 255, 0.8)" : "1px solid rgba(255, 255, 255, 0.1)",
+      boxShadow: ai?.isActive ? "0 0 25px rgba(255, 255, 255, 0.3), inset 0 0 15px rgba(255, 255, 255, 0.2)" : "none",
+  };
+  const handleWatchModeClose = React.useCallback(() => {
+    sendData({ type: "watch-exit-request" });
+  }, [sendData]);
+
+  const handleWhiteboardClose = React.useCallback(() => {
+    setIsWhiteboardMode(false);
+  }, [setIsWhiteboardMode]);
+
+  const handleAvatarToggle = React.useCallback(() => {
+    setIsAvatarMode((prev: boolean) => !prev);
+  }, [setIsAvatarMode]);
 
   return (
     <div style={styles.root}>
@@ -146,6 +245,7 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
           )}
           <button
             onClick={onExit}
+            aria-label="Go back to previous page"
             style={{
               marginTop: 24,
               padding: "10px 32px",
@@ -158,6 +258,32 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
           >
             Go Back
           </button>
+        </div>
+      )}
+
+      {status === "error-camera" && (
+        <div style={styles.errorOverlay}>
+          <div style={styles.errorCard}>
+            <div style={styles.errorIcon}>🚨</div>
+            <h2 style={styles.errorTitle}>Microphone / Camera Access Needed</h2>
+            <p style={styles.errorDesc}>
+              {statusMessage || "Microphone access is required to start a video call. Please allow access in your browser settings and try again."}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              aria-label="Try again"
+              style={styles.errorBtn}
+            >
+              Try Again
+            </button>
+            <button
+              onClick={onExit}
+              aria-label="Go back to previous page"
+              style={{ ...styles.errorBtn, background: "rgba(255,255,255,0.05)", border: "none" }}
+            >
+              Go Back
+            </button>
+          </div>
         </div>
       )}
 
@@ -196,7 +322,7 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
             localCameraMuted={cameraMuted}
             remoteCameraMuted={remoteCameraMuted}
             syncMessage={watchSyncMessage}
-            onClose={() => sendData({ type: "watch-exit-request" })}
+            onClose={handleWatchModeClose}
           />
         </Suspense>
       )}
@@ -213,6 +339,7 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
                   sendData({ type: "watch-accept" });
                   setIsWatchMode(true);
                 }}
+                aria-label="Accept watch request"
                 style={{ padding: "10px 18px", borderRadius: 10, border: "none", background: "#10b981", color: "#fff", cursor: "pointer" }}
               >
                 Accept
@@ -222,6 +349,7 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
                   setWatchRequestPending(false);
                   sendData({ type: "watch-decline" });
                 }}
+                aria-label="Decline watch request"
                 style={{ padding: "10px 18px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "#fff", cursor: "pointer" }}
               >
                 Decline
@@ -252,12 +380,14 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
                   sessionStorage.removeItem("vc_watch_mode");
                   sessionStorage.removeItem("vc_watch_id");
                 }}
+                aria-label="Exit watch mode"
                 style={{ padding: "10px 18px", borderRadius: 10, border: "none", background: "#ef4444", color: "#fff", cursor: "pointer" }}
               >
                 Exit
               </button>
               <button
                 onClick={() => setWatchCloseRequestPending(false)}
+                aria-label="Cancel closing watch mode"
                 style={{ padding: "10px 18px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "#fff", cursor: "pointer" }}
               >
                 Cancel
@@ -282,7 +412,7 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
         <Suspense fallback={null}>
           <WhiteboardOverlay
             sendData={sendData}
-            onClose={() => setIsWhiteboardMode(false)}
+            onClose={handleWhiteboardClose}
             localStream={localStreamRef.current}
             remoteStream={(remoteVideoRef.current?.srcObject as MediaStream) ?? null}
             pageRemoteVideoRef={remoteVideoRef}
@@ -292,7 +422,7 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
 
       {isAvatarMode && (
         <Suspense fallback={null}>
-          <AvatarScene isEnabled={isAvatarMode} onToggle={() => setIsAvatarMode(!isAvatarMode)} room={roomRef.current} isCameraEnabled={!cameraMuted} />
+          <AvatarScene isEnabled={isAvatarMode} onToggle={handleAvatarToggle} room={roomRef.current} isCameraEnabled={!cameraMuted} />
         </Suspense>
       )}
 
@@ -335,8 +465,23 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
             />
 
             {connected && (
-              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 15, display: "flex", justifyContent: "center", padding: "6px 12px 8px" }}>
-                <ElasticSlider defaultValue={50} maxValue={100} className="volume-bar-engraved" onChange={handleVolumeChange} />
+              <div 
+                style={{ 
+                  position: "absolute", 
+                  bottom: -2, 
+                  left: 0, 
+                  right: 0, 
+                  zIndex: 15, 
+                  display: "flex", 
+                  justifyContent: "center", 
+                  padding: "12px 12px 14px",
+                  pointerEvents: "auto"
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <div style={{ width: 240 }}>
+                   <ElasticSlider defaultValue={50} maxValue={100} className="volume-bar-engraved" onChange={handleVolumeChange} />
+                </div>
               </div>
             )}
 
@@ -357,6 +502,7 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
                 </Suspense>
                 <button
                   onClick={() => setShowCountryGlobe(false)}
+                  aria-label="Close country selection"
                   style={{ position: "absolute", top: 12, right: 12, width: 36, height: 36, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.2)", background: "rgba(0,0,0,0.5)", color: "#fff", cursor: "pointer" }}
                 >
                   ✕
@@ -370,24 +516,20 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
                 .reverse()
                 .slice(0, 3)
                 .map((message, index) => (
-                  <div
+                  <RemoteMessageBubble
                     key={message._id}
+                    avatarSrc={remoteUserInfo?.avatar ?? undefined}
+                    avatarName={remoteUserInfo?.name || "Guest"}
+                    displayName={remoteUserInfo?.name || remotePeerIdentity || "Guest"}
+                    isVerified={isUserVerified(remoteUserInfo?.userId)}
+                    messageText={message.text}
                     style={{
                       ...styles.remoteMessageBubble,
                       bottom: index * 70,
                       opacity: 1 - index * 0.15,
                       pointerEvents: "none",
                     }}
-                  >
-                    <Avatar src={remoteUserInfo?.avatar} name={remoteUserInfo?.name || "Guest"} size={26} />
-                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", gap: 3 }}>
-                        {remoteUserInfo?.name || remotePeerIdentity || "Guest"}
-                        {isUserVerified(remoteUserInfo?.userId) && <VerifiedBadge size={12} />}
-                      </span>
-                      <span style={{ fontSize: 13, color: "#fff" }}>{message.text}</span>
-                    </div>
-                  </div>
+                  />
                 ))}
             </div>
 
@@ -397,21 +539,20 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
                 .reverse()
                 .slice(0, 3)
                 .map((message, index) => (
-                  <div
+                  <LocalMessageBubble
                     key={message._id}
+                    avatarSrc={localUserInfo?.avatar ?? undefined}
+                    avatarName={localUserInfo?.name || userName}
+                    displayName={localUserInfo?.name || userName}
+                    isVerified={isUserVerified(localUserInfo?.userId)}
+                    messageText={message.text}
                     style={{
                       ...styles.remoteMessageBubble,
                       bottom: index * 70,
                       opacity: 1 - index * 0.15,
                       pointerEvents: "none",
                     }}
-                  >
-                    <Avatar src={localUserInfo?.avatar} name={localUserInfo?.name || userName} size={26} />
-                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>{localUserInfo?.name || userName}</span>
-                      <span style={{ fontSize: 13, color: "#fff" }}>{message.text}</span>
-                    </div>
-                  </div>
+                  />
                 ))}
             </div>
 
@@ -420,6 +561,7 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
                 setShowChatHistory(!showChatHistory);
                 setUnreadCount(0);
               }}
+              aria-label="Toggle chat history"
               style={{ ...styles.chatHistoryBtn, ...(messages.length === 0 ? { opacity: 0.3, pointerEvents: "none" } : {}) }}
               title={String(t("videochat.chatHistory"))}
             >
@@ -436,7 +578,7 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
               <div style={styles.chatHistoryPanel}>
                 <div style={styles.chatHistoryHeader}>
                   <span style={{ color: "var(--vc-text)", fontSize: 14, fontWeight: 600 }}>{String(t("videochat.chatHistory"))}</span>
-                  <button onClick={() => setShowChatHistory(false)} style={styles.chatHistoryClose}>✕</button>
+                  <button onClick={() => setShowChatHistory(false)} aria-label="Close chat history" style={styles.chatHistoryClose}>✕</button>
                 </div>
                 <div style={styles.chatHistoryMessages}>
                   {messages.length === 0 && (
@@ -468,7 +610,7 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
         </div>
 
         <div style={styles.videoSection}>
-          <div style={styles.videoWrapper}>
+          <div style={localVideoContainerStyle}>
             <video
               ref={localVideoRef}
               autoPlay
@@ -482,6 +624,56 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
                   ? { ...baseStyle, ...styles.videoDark, opacity: 1 }
                   : baseStyle;
               })()}
+            />
+
+            {/* Premium AI Startup Flash */}
+            {aiFlash && (
+                <div 
+                   style={{
+                       position: "absolute",
+                       inset: 0,
+                       background: "linear-gradient(45deg, #fff, rgba(255,255,255,0.5))",
+                       zIndex: 50,
+                       opacity: 0,
+                       pointerEvents: "none",
+                       animation: "ai-flash-anim 1s cubic-bezier(0.23, 1, 0.32, 1) forwards",
+                       borderRadius: "inherit"
+                   }}
+                />
+            )}
+
+            {/* Pulsing Ambient Light for Active AI */}
+            {ai?.isActive && (
+                <div 
+                    style={{
+                        position: "absolute",
+                        inset: -2,
+                        pointerEvents: "none",
+                        zIndex: 5,
+                        background: "transparent",
+                        border: "3px solid rgba(255, 255, 255, 0.6)",
+                        filter: "blur(4px)",
+                        animation: "ai-active-pulse 2.5s infinite ease-in-out",
+                        borderRadius: "inherit"
+                    }}
+                />
+            )}
+
+            <AgentConversationOverlay
+              aiActive={ai?.isActive}
+              connected={connected}
+              aiBubbles={aiBubbles}                userBubbles={userBubbles}              localLabel={localUserInfo?.name || userName}
+              agentLabel="Sigma"
+              audioMuted={audioMuted}
+              sendData={sendData}
+            />
+
+            <LocalTranslationOverlay
+              isEnabled={isLocalTranslationEnabled}
+              isBusy={isLocalTranslationBusy}
+              lines={localTranslationLines}
+              errorMessage={localTranslationError}
+              onToggle={toggleLocalTranslation}
             />
 
             {localUserInfo && (
@@ -517,12 +709,8 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
               screenShare={screenShare}
               agentActive={ai?.isActive}
               agentLoading={ai?.isLoading}
-              startAgent={(room) => {
-                void ai?.startForRoom(room);
-              }}
-              stopAgent={(room) => {
-                void ai?.stopForRoom(room);
-              }}
+              startAgent={ai?.startForRoom}
+              stopAgent={ai?.stopForRoom}
               roomRef={roomRef}
               isWatchMode={isWatchMode}
               connected={connected}
@@ -575,10 +763,13 @@ export function VideoCore(state: UseVideoPageStateReturn & { chess?: any; ai?: a
         styles={styles}
         isWatchMode={isWatchMode}
         cameraMuted={cameraMuted}
+        audioMuted={audioMuted}
         onToggleCamera={handleToggleCamera}
+        onToggleAudio={handleToggleAudio}
         onNext={handleSkip}
-        onEnd={handleExit}
+        onEnd={handleToggleSearch}
+        isSearching={isSearching}
       />
     </div>
   );
-}
+});

@@ -1,0 +1,1 @@
+const fs = require('fs'); const content = fs.readFileSync('src/pages/videochat/components/AIAgentWidget.tsx', 'utf8'); fs.writeFileSync('src/pages/videochat/components/AIAgentWidget.tsx', content.replace('</button>\n      </div>\n    </div>\n  );\n}', '</button>\n        </div>\n      </GlassSurface>\n    </div>\n  );\n}'));

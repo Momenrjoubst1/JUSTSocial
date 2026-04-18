@@ -1,4 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { NextFunction, Request, Response } from 'express';
+
+vi.mock('../../middleware/auth.middleware.js', () => ({
+  authMiddleware: (req: Request, _res: Response, next: NextFunction) => {
+    (req as Request & { user?: { id: string; email: string }; userId?: string }).user = {
+      id: 'vitest-user',
+      email: 'vitest@example.com',
+    };
+    (req as Request & { userId?: string }).userId = 'vitest-user';
+    next();
+  },
+}));
+
 import request from 'supertest';
 import app from '../../index';
 import * as textModerator from '../../utils/text-moderator';

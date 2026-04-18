@@ -10,7 +10,7 @@
  * ════════════════════════════════════════════════════════════════════════════════
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Message } from "@/pages/videochat/core/types";
 
 /* ─── Hook Return ───────────────────────────────────────────────────────── */
@@ -40,8 +40,14 @@ export function useTextChat(
   const msgIdCounter = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  // Debounce ref for flashNotification to prevent rapid-fire Set creations
+  const flashDebounceRef = useRef<Set<number>>(new Set());
+
   /* ── Flash a message bubble then auto-hide ──────────────────────────── */
   const flashNotification = useCallback((id: number) => {
+    // Debounce: skip if this id is already flashing
+    if (flashDebounceRef.current.has(id)) return;
+    flashDebounceRef.current.add(id);
     setVisibleMsgIds((prev) => new Set(prev).add(id));
     setTimeout(() => {
       setVisibleMsgIds((prev) => {
@@ -49,6 +55,7 @@ export function useTextChat(
         next.delete(id);
         return next;
       });
+      flashDebounceRef.current.delete(id);
     }, 3000);
   }, []);
 
@@ -64,7 +71,10 @@ export function useTextChat(
       _id: id,
     };
 
-    sendData({ type: "msg", message });
+    // Guard: only send if sendData is provided (connection is active)
+    if (sendData) {
+      sendData({ type: "msg", message });
+    }
     setMessages((prev) => [...prev, message]);
     setMessageInput("");
     flashNotification(id);
@@ -80,13 +90,14 @@ export function useTextChat(
       } else {
         msg = { ...parsed, _id: id, sender: "remote" };
       }
+
       msg.time = new Date(msg.time);
       msg._id = id;
 
       setMessages((prev) => [...prev, msg]);
       flashNotification(id);
     },
-    [flashNotification],
+    [flashNotification]
   );
 
   /* ── Clear (on new peer) ─────────────────────────────────────────────── */

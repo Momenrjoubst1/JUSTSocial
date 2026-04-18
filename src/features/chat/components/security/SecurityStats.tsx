@@ -282,7 +282,7 @@ export const SecurityStats: React.FC<SecurityStatsProps> = ({ className = '', is
                                                 <p className="text-white/80 text-[9px] mt-1 leading-tight">تم رصد دخول من موقع جغرافي غير مألوف. يرجى تأكيد الهوية.</p>
                                                 <div className="mt-3 flex gap-2">
                                                     <button onClick={() => window.location.reload()} className="bg-white text-red-600 text-[10px] font-bold px-4 py-1.5 rounded-full hover:bg-white/90 transition-colors">إعادة المصادقة</button>
-                                                    <button onClick={() => { if (geoInfo) saveGeoFingerprint(geoInfo); try { sessionStorage.setItem('trusted_geo', '1'); } catch (e) { } trustCurrentLocation(); setGeoStatus('secure'); }} className="bg-red-500 text-white border border-white/20 text-[10px] font-bold px-4 py-1.5 rounded-full hover:bg-red-400 transition-colors flex items-center gap-1"><ShieldCheck size={10} /> تجاوز</button>
+                                                    <button onClick={() => { if (geoInfo) saveGeoFingerprint(geoInfo); try { sessionStorage.setItem('trusted_geo', '1'); } catch (e) { console.warn("Cleaned up error:", e); } trustCurrentLocation(); setGeoStatus('secure'); }} className="bg-red-500 text-white border border-white/20 text-[10px] font-bold px-4 py-1.5 rounded-full hover:bg-red-400 transition-colors flex items-center gap-1"><ShieldCheck size={10} /> تجاوز</button>
                                                 </div>
                                             </motion.div>
                                         )}

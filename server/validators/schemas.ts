@@ -15,15 +15,23 @@ export const livekitTokenSchema = z.object({
     .max(200),
 });
 
+export const livekitLeaveSchema = z.object({
+  roomName: z
+    .string({ required_error: 'roomName is required' })
+    .min(1, 'roomName cannot be empty')
+    .max(100, 'roomName too long'),
+});
+
 export const agentSchema = z.object({
   roomName: z
     .string({ required_error: 'roomName is required' })
     .min(1)
     .max(100)
     .regex(/^[a-zA-Z0-9_-]+$/),
-  action: z.enum(['start', 'stop'], {
-    required_error: 'action must be start or stop',
-  }).optional(),
+  identity: z
+    .string()
+    .uuid('identity must be a valid UUID')
+    .optional(),
 });
 
 export const moderationSchema = z.object({
@@ -51,3 +59,24 @@ export type LivekitTokenInput = z.infer<typeof livekitTokenSchema>;
 export type AgentInput = z.infer<typeof agentSchema>;
 export type ModerationInput = z.infer<typeof moderationSchema>;
 export type ChatTranslationInput = z.infer<typeof chatTranslationSchema>;
+
+export const reportSchema = z.object({
+    reporterId: z.string().min(1),
+    reportedUserId: z.string().optional(),
+    reportedIdentity: z.string().optional(),
+    reportedFingerprint: z.string().optional(),
+    reason: z.string().optional(),
+    description: z.string().optional(),
+    roomName: z.string().optional(),
+    livekitRoom: z.string().optional(),
+    livekitIdentity: z.string().optional(),
+    imageBase64: z.string().optional()
+}).passthrough();
+
+export const moderateSchema = z.object({
+    imageBase64: z.string().optional(),
+    identity: z.string().optional(),
+    fingerprint: z.string().optional(),
+    userId: z.string().optional(),
+    roomName: z.string().optional()
+}).passthrough();

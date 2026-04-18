@@ -123,13 +123,15 @@ export function useChat() {
                     if (!isMounted) break;
                     const m = data[i] as DbMessage;
                     let text = await decryptHybridMessage(privateKey!, user.id!, m.sender_id, m.encrypted_content);
-                    if (text.includes("فشل فك التشفير") || text.includes("Corrupted")) {
+                    if (text === "🔒 [فشل فك التشفير - Decryption Failed]" || text === "🔒 [بيانات تالفة - Data Corrupted]") {
+                        // لا تحاول فك التشفير مراراً وتكراراً للرسائل التالفة القديمة
+                        text = text;
+                    } else if (text.includes("فشل فك التشفير") || text.includes("Corrupted")) {
                         const { data: senderPubData } = await supabase.from('user_public_keys').select('public_key').eq('user_id', m.sender_id).maybeSingle();
                         if (senderPubData) {
                             text = await decryptHybridMessage(privateKey!, user.id!, m.sender_id, m.encrypted_content);
                         }
                     }
-                    decryptedData.push({ ...m, text, metadata: m.metadata });
                     // Yield to main thread every 10 messages (LRU cache makes cached hits instant)
                     if (i % 10 === 9) await new Promise(r => requestAnimationFrame(r));
                 }
@@ -277,9 +279,24 @@ export function useChat() {
             // Fire async query uncoupled from react hooks loop to prevent blocking and DB spam
             const resolveReadReceipts = async () => {
                 try {
-                     const { error } = await supabase.from('messages').update({ status: 'read' }).in('id', ids);
-                     if (error) console.error("Batch Read update failed:", error);
-                } catch(err) {}
+                    const session = await supabase.auth.getSession();
+                    const token = session.data.session?.access_token;
+                    if (!token) return;
+
+                    const res = await fetch('/api/messages/read', {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ messageIds: ids })
+                    });
+                    
+                    if (!res.ok) {
+                        const err = await res.json();
+                        console.error("Batch Read update failed via API:", err);
+                    }
+                } catch (e) { console.warn("Cleaned up error:", e); }
             };
             resolveReadReceipts();
         }
@@ -311,4 +328,6 @@ export function useChat() {
         isSearchingGlobal
     };
 }
+
+
 

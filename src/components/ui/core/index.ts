@@ -9,3 +9,5 @@ export { default as VerifiedBadge, isUserVerified, fetchAndCacheVerification, re
 export * from './Avatar';
 export * from './ErrorBoundary';
 export * from './SEO';
+export { default as Carousel } from './Carousel';
+export { default as DecryptedText } from './DecryptedText';

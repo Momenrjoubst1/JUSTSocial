@@ -6,13 +6,21 @@ import { logger } from '../utils/logger.js';
 
 const ROOM_TTL = 4 * 60 * 60; // 4 hours
 
-const LIVEKIT_API_KEY = process.env.LIVEKIT_API_KEY;
-const LIVEKIT_API_SECRET = process.env.LIVEKIT_API_SECRET;
-const LIVEKIT_URL = process.env.LIVEKIT_URL;
+const isTest = process.env.NODE_ENV === 'test';
+
+const LIVEKIT_API_KEY =
+  process.env.LIVEKIT_API_KEY || (isTest ? 'vitest-livekit-api-key' : '');
+const LIVEKIT_API_SECRET =
+  process.env.LIVEKIT_API_SECRET ||
+  (isTest ? 'vitest-livekit-api-secret-at-least-32-characters!!' : '');
+const LIVEKIT_URL =
+  process.env.LIVEKIT_URL || (isTest ? 'wss://vitest.invalid' : '');
 
 if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET || !LIVEKIT_URL) {
   logger.error('Missing LiveKit environment variables');
-  process.exit(1);
+  if (!isTest) {
+    process.exit(1);
+  }
 }
 
 const roomService = new RoomServiceClient(LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET);
@@ -48,13 +56,39 @@ export async function findAvailableRoom(country: string): Promise<RoomData | nul
   return null;
 }
 
-export async function addParticipant(roomName: string, identity: string): Promise<void> {
-  const room = await getRoom(roomName);
-  if (!room) return;
-  if (!room.participants.includes(identity)) {
-    room.participants.push(identity);
-  }
-  await saveRoom(room);
+const addParticipantScript = `
+  local key = KEYS[1]
+  local identity = ARGV[1]
+  local ttl = ARGV[2]
+
+  local data = redis.call('GET', key)
+  if not data then return 0 end
+
+  local room
+  local ok, decoded = pcall(cjson.decode, data)
+  if not ok or not decoded then return 0 end
+  room = decoded
+
+  if #room.participants >= 2 then return 0 end
+
+  for _, p in ipairs(room.participants) do
+    if p == identity then return 1 end
+  end
+
+  table.insert(room.participants, identity)
+  redis.call('SETEX', key, ttl, cjson.encode(room))
+  return 1
+`;
+
+export async function addParticipant(roomName: string, identity: string): Promise<boolean> {
+  const result = await redis.eval(
+    addParticipantScript,
+    1,
+    `room:${roomName}`,
+    identity,
+    ROOM_TTL.toString()
+  );
+  return result === 1;
 }
 
 const removeParticipantScript = `
@@ -66,7 +100,10 @@ const removeParticipantScript = `
   local data = redis.call('GET', key)
   if not data then return 0 end
 
-  local room = cjson.decode(data)
+  local room
+  local ok, decoded = pcall(cjson.decode, data)
+  if not ok or not decoded then return 0 end
+  room = decoded
   local filtered = {}
   for _, p in ipairs(room.participants) do
     if p ~= identity then
@@ -101,37 +138,55 @@ export async function removeParticipant(roomName: string, identity: string, coun
 
 export async function findOrCreateRoom(userCountry?: string, identity?: string): Promise<string> {
   const country = userCountry || 'unknown';
+  const MAX_RETRIES = 3;
 
   try {
-    const existing = await findAvailableRoom(country);
-    if (existing) {
-      if (Date.now() - existing.createdAt > 4000) {
-        try {
-          const participants = await roomService.listParticipants(existing.roomName);
-          if (participants.length === 0) {
-            await deleteRoom(existing.roomName, country);
-            return findOrCreateRoom(userCountry, identity);
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const existing = await findAvailableRoom(country);
+      if (existing) {
+        if (Date.now() - existing.createdAt > 10000) {
+          try {
+            const participants = await roomService.listParticipants(existing.roomName);
+            if (participants.length === 0) {
+              await deleteRoom(existing.roomName, country);
+              continue;
+            }
+          } catch { /* Livekit error, ignore */ }
+        }
+
+        if (identity) {
+          const added = await addParticipant(existing.roomName, identity);
+          if (!added) {
+            continue;
           }
-        } catch { /* Livekit error, ignore */ }
+        }
+        logger.info(`Connected user to existing room: ${existing.roomName} (${country})`);
+        return existing.roomName;
       }
 
-      if (identity) {
-        await addParticipant(existing.roomName, identity);
-      }
-      logger.info(`Connected user to existing room: ${existing.roomName} (${country})`);
-      return existing.roomName;
+      const newRoomName = `session-${uuidv4()}`;
+      const newRoom: RoomData = {
+        roomName: newRoomName,
+        country,
+        participants: identity ? [identity] : [],
+        createdAt: Date.now(),
+      };
+      await saveRoom(newRoom);
+      logger.info(`Created new room for ${country}: ${newRoomName}`);
+      return newRoomName;
     }
 
-    const newRoomName = `session-${uuidv4()}`;
-    const newRoom: RoomData = {
-      roomName: newRoomName,
+    // All retries exhausted, create a new room as fallback
+    const fallbackName = `session-${uuidv4()}`;
+    const fallbackRoom: RoomData = {
+      roomName: fallbackName,
       country,
       participants: identity ? [identity] : [],
       createdAt: Date.now(),
     };
-    await saveRoom(newRoom);
-    logger.info(`Created new room for ${country}: ${newRoomName}`);
-    return newRoomName;
+    await saveRoom(fallbackRoom);
+    logger.warn(`Retries exhausted, created fallback room: ${fallbackName}`);
+    return fallbackName;
   } catch (err) {
     logger.error('Redis error in findOrCreateRoom', err);
     const fallbackName = `session-${uuidv4()}`;

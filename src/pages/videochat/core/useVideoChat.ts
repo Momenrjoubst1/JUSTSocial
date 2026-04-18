@@ -12,6 +12,7 @@ import {
   useVideoSession,
   type UseVideoSessionReturn,
   type VideoSessionParticipant,
+  type VideoSessionMatch,
 } from "@/pages/videochat/core/useVideoSession";
 import { useMatchmaking } from "@/pages/videochat/core/useMatchmaking";
 import { useParticipants } from "@/pages/videochat/core/useParticipants";
@@ -22,6 +23,7 @@ export interface UseVideoChatOptions {
   countryPreference?: string;
   fingerprint?: string | null;
   readyToConnect?: boolean;
+  aiActive?: boolean;
 }
 
 export interface UseVideoChatReturn extends Omit<UseVideoSessionReturn, "remoteCameraMuted" | "remotePeerIdentity"> {
@@ -35,27 +37,31 @@ export function useVideoChat({
   countryPreference,
   fingerprint,
   readyToConnect = true,
+  aiActive = false,
 }: UseVideoChatOptions): UseVideoChatReturn {
   const matchmaking = useMatchmaking({
     countryPreference,
     fingerprint,
   });
 
-  const requestMatch = useCallback(async () => {
-      try {
+  const { requestMatch: doRequestMatch } = matchmaking;
 
-          return matchmaking.requestMatch();
-        
-      } catch (error) {
-        console.error('[useVideoChat.ts] [anonymous_function]:', error);
-      }
-  }, [matchmaking]);
+  const requestMatch = useCallback(async (): Promise<VideoSessionMatch | null> => {
+    try {
+      const m = await doRequestMatch();
+      return m;
+    } catch (error) {
+      console.error('[useVideoChat.ts] [requestMatch]:', error);
+      throw error; // Rethrow to let useVideoSession handle specific rate limit errors
+    }
+  }, [doRequestMatch]);
 
   const session = useVideoSession({
     onExit,
     onDataReceived,
     requestMatch,
     readyToConnect,
+    aiActive,
   });
 
   const participants = useParticipants({

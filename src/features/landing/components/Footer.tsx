@@ -8,7 +8,7 @@ export const Footer = ({ t }: { t: any }) => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
           <div className="col-span-1 md:col-span-2 space-y-6">
             <div className="flex items-center gap-0">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300" className="w-10 h-12 -mr-1 drop-shadow-[0_0_8px_rgba(0,210,255,0.5)]">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300" className="w-10 h-12 -mr-1">
                 <defs>
                   <filter id="neonGlowFooter" x="-50%" y="-50%" width="200%" height="200%">
                     <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur1" />
@@ -22,23 +22,24 @@ export const Footer = ({ t }: { t: any }) => {
                 </defs>
                 <path d="M 120 40 L 60 160 L 95 160 L 70 260 L 140 130 L 105 130 Z"
                   fill="none"
-                  stroke="#00d2ff"
+                  stroke="currentColor"
                   strokeWidth="4"
-                  filter="url(#neonGlowFooter)" />
+                  strokeLinecap="round"
+                  strokeLinejoin="round" />
               </svg>
-              <span className="text-2xl font-bold text-foreground tracking-tight">SkillSwap</span>
+              <span className="text-2xl font-bold text-foreground tracking-tight">JUST Social</span>
             </div>
             <p className="text-foreground/40 max-w-sm leading-relaxed">
               {String(t("landing.footer.tagline"))}
             </p>
             <div className="flex gap-4">
               {[
-                { icon: <TwitterIcon />, href: "https://x.com/RjoubMomen57135", color: "hover:text-sky-400" },
-                { icon: <InstagramIcon />, href: "https://www.instagram.com/momenrjoub/", color: "hover:text-pink-500" },
-                { icon: <LinkedInIcon />, href: "https://www.linkedin.com/in/momen-rjoub-9a5ab5371", color: "hover:text-blue-500" },
-                { icon: <GitHubIcon />, href: "https://github.com/Momenrjoubst1", color: "hover:text-foreground" }
+                { icon: <TwitterIcon />, href: "https://x.com/RjoubMomen57135" },
+                { icon: <InstagramIcon />, href: "https://www.instagram.com/momenrjoub/" },
+                { icon: <LinkedInIcon />, href: "https://www.linkedin.com/in/momen-rjoub-9a5ab5371" },
+                { icon: <GitHubIcon />, href: "https://github.com/Momenrjoubst1" }
               ].map((social, idx) => (
-                <a key={idx} href={social.href} target="_blank" rel="noopener noreferrer" className={`text-foreground/30 transition-colors ${social.color}`}>
+                <a key={idx} href={social.href} target="_blank" rel="noopener noreferrer" className="text-[#525252] hover:text-[#A1A1A1] transition-colors">
                   {social.icon}
                 </a>
               ))}

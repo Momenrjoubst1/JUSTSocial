@@ -6,6 +6,7 @@ import { useAuthContext } from '@/context/AuthContext';
 import { EmojiText } from '@/components/ui/EmojiText';
 import { isOnlyEmoji, isEmojiOnly } from '@/utils/emoji.utils';
 import { LinkPreviewCard } from './LinkPreviewCard';
+import { DecryptedText } from '@/components/ui/core';
 import { useLinkDetection } from '../../hooks/useLinkDetection';
 
 /** Convert data: URIs to blob: URLs to bypass CSP media-src restrictions */
@@ -195,6 +196,8 @@ export const MessageBubble = React.memo(({
         return initialAnimationType;
     });
 
+    const [shouldAnimateDecrypt] = React.useState(animationType !== 'none');
+
     React.useEffect(() => {
         if (animationType !== 'none') {
             const t = setTimeout(() => setAnimationType('none'), 700);
@@ -213,13 +216,7 @@ export const MessageBubble = React.memo(({
             ? 'bg-transparent border-none shadow-none p-0'
             : isImage && !replyToId
                 ? 'bg-transparent border-0 shadow-none px-0 py-0'
-                : isMe
-                    ? (isDark
-                        ? `bg-gradient-to-br from-primary/90 to-primary text-foreground shadow-sm shadow-primary/20 px-4 py-2.5`
-                        : `bg-[#0084ff] text-white shadow-sm px-4 py-2.5`)
-                    : (isDark
-                        ? 'bg-[#262628] text-white border border-white/5 px-4 py-2.5'
-                        : 'bg-[#f0f0f0] text-black shadow-sm px-4 py-2.5')
+                : 'bg-black/60 backdrop-blur-md border border-white/10 text-white shadow-sm shadow-black/20 px-4 py-2.5'
             }`}>
             
             {/* Privacy Shield Overlay */}
@@ -283,13 +280,24 @@ export const MessageBubble = React.memo(({
                 ) : isAudio ? (
                     <SafeAudio src={content} />
                 ) : (
-                    <div dir="auto" className="whitespace-pre-wrap">
-                        <EmojiText 
-                            text={text} 
-                            size={onlyEmoji ? 40 : 20} 
-                            emojiOnly={onlyEmoji} 
-                            animationType={animationType} 
-                        />
+                    <div dir="auto" className="whitespace-pre-wrap flex items-end">
+                        {shouldAnimateDecrypt ? (
+                            <DecryptedText
+                                text={text}
+                                animateOn="view"
+                                speed={40}
+                                maxIterations={12}
+                                revealDirection={isMe ? 'end' : 'start'}
+                                className={`inline-block ${onlyEmoji ? 'text-[40px]' : ''}`}
+                            />
+                        ) : (
+                            <EmojiText 
+                                text={text} 
+                                size={onlyEmoji ? 40 : 20} 
+                                emojiOnly={onlyEmoji} 
+                                animationType={animationType} 
+                            />
+                        )}
                         {isEdited && (
                             <span className={`inline-block ml-1.5 text-[10px] italic opacity-40 align-bottom select-none`}>(edited)</span>
                         )}

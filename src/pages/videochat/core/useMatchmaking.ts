@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthRefresh } from "@/features/auth/hooks/useAuthRefresh";
 import { CONFIG } from "@/pages/videochat/core/types";
 
@@ -36,6 +37,7 @@ function isMatchAssignment(value: unknown): value is MatchAssignment {
 }
 
 export function useMatchmaking({ countryPreference, fingerprint }: UseMatchmakingOptions): UseMatchmakingReturn {
+  const navigate = useNavigate();
   const { fetchWithAuth } = useAuthRefresh();
   const [isRequesting, setIsRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +79,7 @@ export function useMatchmaking({ countryPreference, fingerprint }: UseMatchmakin
         if (response.status === 403) {
           const body = (await response.json().catch(() => null)) as { banned?: boolean } | null;
           if (body?.banned) {
-            window.location.href = "/banned";
+            navigate("/banned", { replace: true });
             return null;
           }
         }
@@ -97,7 +99,7 @@ export function useMatchmaking({ countryPreference, fingerprint }: UseMatchmakin
       }
       const message = err instanceof Error ? err.message : "Unable to request match";
       setError(message);
-      return null;
+      throw err;
     } finally {
       setIsRequesting(false);
       if (abortRef.current === controller) {

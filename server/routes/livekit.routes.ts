@@ -21,7 +21,7 @@ router.get('/livekit-token', perUserTokenLimiter, asyncHandler(async (req, res) 
 
   if (fingerprint || ipStr) {
     const isBanned = await checkIsBanned(fingerprint || '', ipStr);
-    if (isBanned) {
+    if (isBanned?.banned) {
       res.status(403).json({
         success: false,
         code: 'FORBIDDEN',
@@ -43,6 +43,18 @@ router.get('/livekit-token', perUserTokenLimiter, asyncHandler(async (req, res) 
     return;
   }
 
+  const lockKey = `livekit:lock:${identity}`;
+  const lock = await redis.set(lockKey, "1", "EX", 2, "NX");
+
+  if (!lock) {
+    res.status(429).json({
+      success: false,
+      code: 'TOKEN_IN_PROGRESS',
+      message: 'Token generation already in progress'
+    });
+    return;
+  }
+
   const activeKey = `livekit:active_token:${identity}`;
   let roomName = await redis.get(activeKey);
 
@@ -57,6 +69,14 @@ router.get('/livekit-token', perUserTokenLimiter, asyncHandler(async (req, res) 
 
   if (!roomName) {
     roomName = await findOrCreateRoom(country, identity);
+  }
+
+  // ── Step 0: Check for existing active token (token reuse) ─────────────
+  const existingTokenKey = `livekit:token:${identity}:${roomName}`;
+  const existingJwt = await redis.get(existingTokenKey);
+  if (existingJwt) {
+    res.json({ token: existingJwt, roomName, url: livekitConfig.url, reused: true });
+    return;
   }
 
   // ── Step 1: Token TTL reduced to 2 hours ──────────────────────────────
@@ -83,7 +103,7 @@ router.get('/livekit-token', perUserTokenLimiter, asyncHandler(async (req, res) 
 
   // ── Step 3: Record the issued token in Redis ───────────────────────────
   const tokenKey = `livekit:token:${identity}:${roomName}`;
-  await redis.set(tokenKey, 'issued', 'EX', TOKEN_TTL);
+  await redis.set(tokenKey, jwt, 'EX', TOKEN_TTL);
   await redis.set(activeKey, roomName, 'EX', TOKEN_TTL);
 
   res.json({ token: jwt, roomName, url: livekitConfig.url });

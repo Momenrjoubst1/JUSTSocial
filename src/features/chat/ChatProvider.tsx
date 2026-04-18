@@ -101,7 +101,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         
         // Mark global incoming message as 'delivered' seamlessly
         if (isInsert && newMsg.status === 'sent') {
-            supabase.from('messages').update({ status: 'delivered' }).eq('id', newMsg.id).then();
+            supabase.auth.getSession().then(({ data }) => {
+                const token = data.session?.access_token;
+                if (!token) return;
+                fetch('/api/messages/delivered', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ messageId: newMsg.id })
+                }).catch(err => console.error("Global delivery marker failed", err));
+            });
         }
 
         let senderNameForToast = "Someone";
@@ -179,27 +187,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     // 3. Offline Pending Sync Mechanism (WhatsApp Offline Mode) is now handled via useOfflineSync in PresenceManager
 
-
     return (
         <>
             <PresenceManager />
-            {user && status === 'reconnecting' && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999, background: '#FEF3C7', padding: '8px', textAlign: 'center', fontSize: '13px', color: '#92400E' }}>
-                    جارٍ إعادة الاتصال... ({retryCount}/{maxRetries})
-                </div>
-            )}
-            {user && status === 'disconnected' && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999, background: '#FEE2E2', padding: '8px', textAlign: 'center', fontSize: '13px', color: '#991B1B' }}>
-                    انقطع الاتصال بسيرفر الدردشة.
-                    <button
-                        type="button"
-                        onClick={reconnect}
-                        style={{ marginInlineStart: 8, padding: '2px 8px', borderRadius: 6, border: '1px solid #DC2626', background: '#fff', color: '#991B1B', cursor: 'pointer' }}
-                    >
-                        إعادة المحاولة
-                    </button>
-                </div>
-            )}
             {children}
         </>
     );

@@ -11,7 +11,10 @@ import { useFingerprint } from "@/hooks/useFingerprint";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { PageErrorFallback } from "@/components/ui/PageErrorFallback";
 import { useAuthRefresh } from "@/features/auth/hooks/useAuthRefresh";
+import { WelcomeOverlay } from "@/components/ui/effects/WelcomeOverlay";
 
+
+import { LandingPage } from "@/pages/landing/LandingPage";
 
 const VideoChatPage = lazy(() => import("@/pages/videochat/VideoChatPage"));
 const ProfilePage = lazy(() => import("@/pages/profile/ProfilePage"));
@@ -19,7 +22,6 @@ const SettingsPage = lazy(() => import("@/pages/settings/SettingsPage"));
 const MessagesPage = lazy(() => import("@/pages/messages/MessagesPage"));
 const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 const BannedPage = lazy(() => import("@/pages/banned/BannedPage"));
-const LandingPage = lazy(() => import("@/pages/landing/LandingPage").then(module => ({ default: module.LandingPage })));
 
 const SuspenseLoader = () => (
   <div className="fixed inset-0 bg-background flex flex-col items-center justify-center z-[9999]">
@@ -30,25 +32,21 @@ const SuspenseLoader = () => (
     >
       <div className="w-24 h-24 rounded-3xl bg-primary/10 backdrop-blur-3xl border border-primary/20 flex items-center justify-center relative overflow-hidden">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="40 20 140 260" className="w-12 h-12">
-          <motion.path
+          <path
             d="M 120 40 L 60 160 L 95 160 L 70 260 L 140 130 L 105 130 Z"
             fill="none"
             stroke="#7c3aed"
             strokeWidth="12"
             strokeLinejoin="round"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            className="suspense-loader-path"
           />
         </svg>
         <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent opacity-50" />
       </div>
 
       {/* Absolute pulsing ring */}
-      <motion.div
-        animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
-        transition={{ duration: 2, repeat: Infinity }}
-        className="absolute -inset-4 border border-primary/30 rounded-[2.5rem] pointer-events-none"
+      <div
+        className="absolute -inset-4 border border-primary/30 rounded-[2.5rem] pointer-events-none suspense-loader-ring"
       />
     </motion.div>
 
@@ -58,14 +56,12 @@ const SuspenseLoader = () => (
       transition={{ delay: 0.2 }}
       className="mt-8 flex flex-col items-center"
     >
-      <h2 className="text-sm font-black uppercase tracking-[0.3em] text-primary/80">SkillSwap</h2>
+      <h2 className="text-sm font-black uppercase tracking-[0.3em] text-foreground/80">JUST Social</h2>
       <div className="mt-4 flex gap-1.5">
         {[0, 1, 2].map((i) => (
-          <motion.div
+          <div
             key={i}
-            animate={{ opacity: [0.3, 1, 0.3] }}
-            transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-            className="w-1 h-1 rounded-full bg-primary"
+            className="w-1 h-1 rounded-full bg-primary suspense-loader-dot"
           />
         ))}
       </div>
@@ -90,6 +86,8 @@ export function App() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isBanned, setIsBanned] = useState(false);
   const [isBanChecking, setIsBanChecking] = useState(true);
+  const [showWelcomeScreen, setShowWelcomeScreen] = useState(false);
+  const [welcomeName, setWelcomeName] = useState("");
 
   // Initialize Tab Notifications Hook
   const { unreadCount, latestMessage, notificationCount, setNotificationCount, latestNotification } = useTabNotifications(userId);
@@ -186,9 +184,25 @@ export function App() {
         setShowSignIn(false);
         setShowSignUp(false);
 
-        // On SIGNED_IN, check for Google avatar ONLY if signed in via Google
         if (event === "SIGNED_IN") {
           const authProvider = localStorage.getItem('auth_provider');
+
+          if (authProvider === 'google') {
+            // Because Google OAuth redirects the page, onLoginSuccess callback isn't fired.
+            // We must trigger the welcome screen here!
+            supabase
+              .from("public_profiles")
+              .select("full_name, username")
+              .eq("id", user.id)
+              .maybeSingle()
+              .then(({ data }) => {
+                const name = data?.full_name || data?.username || user.user_metadata?.full_name || user.user_metadata?.username || user.email?.split("@")[0] || "";
+                setWelcomeName(name);
+                setShowWelcomeScreen(true);
+                setTimeout(() => setShowWelcomeScreen(false), 5000);
+              });
+          }
+
           const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
           if (authProvider === 'google' && googleAvatar) {
             // Trigger owns profile creation; we only verify and update avatar if profile exists.
@@ -300,14 +314,14 @@ export function App() {
     return profileImageUrl || getUserAvatarUrl(null, _email);
   };
 
-  return (    <ErrorBoundary>    <div className={`relative min-h-screen w-full flex flex-col items-center overflow-x-hidden select-none ${theme === "dark"
+  return (
+    <ErrorBoundary>
+      <div className={`relative min-h-screen w-full flex flex-col items-center overflow-x-hidden select-none ${theme === "dark"
       ? "bg-background bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))]"
       : "bg-background"
       }`}>
       <Suspense fallback={<SuspenseLoader />}>
-        {isBanChecking ? (
-          <SuspenseLoader />
-        ) : isBanned && location.pathname !== '/banned' ? (
+        {isBanned && location.pathname !== '/banned' ? (
           <BannedPage />
         ) : (
           <ErrorBoundary>
@@ -551,11 +565,27 @@ export function App() {
                   setShowSignIn(false);
                   setShowSignUp(true);
                 }}
-                onLoginSuccess={(email: string) => {
+                onLoginSuccess={async (email: string) => {
                   setShowSignIn(false);
                   setIsLoggedIn(true);
                   setUserEmail(email);
-                  // Optional: navigate("/profile") or stay here
+
+                  // Manually trigger welcome screen for manual login
+                  let name = email.split("@")[0] || "";
+                  try {
+                    const sessionData = await supabase.auth.getSession();
+                    const userId = sessionData.data.session?.user?.id;
+                    if (userId) {
+                      const { data } = await supabase.from("public_profiles").select("full_name, username").eq("id", userId).maybeSingle();
+                      if (data?.full_name || data?.username) {
+                        name = data.full_name || data.username;
+                      }
+                    }
+                  } catch (e) {}
+
+                  setWelcomeName(name);
+                  setShowWelcomeScreen(true);
+                  setTimeout(() => setShowWelcomeScreen(false), 5000);
                 }}
               />
             </motion.div>
@@ -594,12 +624,25 @@ export function App() {
                   setShowSignUp(false);
                   setIsLoggedIn(true);
                   setUserEmail(email);
+
+                  // Manually trigger welcome screen for manual signup
+                  const name = email.split("@")[0] || "";
+                  setWelcomeName(name);
+                  setShowWelcomeScreen(true);
+                  setTimeout(() => setShowWelcomeScreen(false), 5000);
                 }}
               />
             </motion.div>
           </>
         )}
       </AnimatePresence>
+
+      {/* Welcome Screen Overlay */}
+      <WelcomeOverlay 
+        isVisible={showWelcomeScreen} 
+        userName={welcomeName} 
+        onClose={() => setShowWelcomeScreen(false)} 
+      />
 
       </div>
     </ErrorBoundary>

@@ -1,10 +1,6 @@
-/**
- * AIAgentControl — Component for controlling the AI Agent
- * مكون للتحكم بالوكيل الذكي
- */
-
-import { useState } from 'react';
-import { Cpu, Play, Square } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Cpu, Play, Square, AlertCircle, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface AIAgentControlProps {
   roomName: string;
@@ -23,7 +19,16 @@ export function AIAgentControl({
   onStart,
   onStop
 }: AIAgentControlProps) {
-  const [showMenu, setShowMenu] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  // Sync and auto-clear local error
+  useEffect(() => {
+    if (agentError) {
+      setLocalError(agentError);
+      const timer = setTimeout(() => setLocalError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [agentError]);
 
   const handleToggleAgent = async () => {
     try {
@@ -38,58 +43,94 @@ export function AIAgentControl({
   };
 
   return (
-    <div className="relative">
+    <div className="relative inline-flex flex-col items-center">
       {/* Main Button */}
-      <button
+      <motion.button
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
         onClick={handleToggleAgent}
         disabled={agentLoading}
         className={`
-          flex items-center gap-2 px-4 py-2 rounded-lg font-semibold
-          transition-all duration-200
+          relative flex items-center gap-3 px-5 py-2.5 rounded-xl font-bold
+          transition-all duration-300 shadow-xl overflow-hidden
           ${agentActive
-            ? 'bg-red-500 hover:bg-red-600 text-white'
-            : 'bg-blue-500 hover:bg-blue-600 text-white'
+            ? 'bg-gradient-to-r from-red-500 to-rose-600 text-white'
+            : 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white'
           }
-          ${agentLoading ? 'opacity-60 cursor-not-allowed' : ''}
-          shadow-lg
+          ${agentLoading ? 'opacity-70 cursor-wait' : ''}
         `}
-        title={agentActive ? 'إيقاف الوكيل' : 'تفعيل الوكيل'}
       >
-        <Cpu size={18} />
-        {agentLoading ? (
-          <>
-            <span className="flex gap-0.5"><span className="w-1 h-1 rounded-full bg-white animate-pulse" /><span className="w-1 h-1 rounded-full bg-white animate-pulse" style={{ animationDelay: '150ms' }} /><span className="w-1 h-1 rounded-full bg-white animate-pulse" style={{ animationDelay: '300ms' }} /></span>
-            جاري...
-          </>
-        ) : agentActive ? (
-          <>
-            <Square size={16} />
-            إيقاف الوكيل
-          </>
-        ) : (
-          <>
-            <Play size={16} />
-            تفعيل الوكيل
-          </>
+        {/* Shine Animation */}
+        <motion.div
+           className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full"
+           animate={agentActive ? { translateX: ['100%', '-100%'] } : {}}
+           transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+        />
+
+        <Cpu className={`w-5 h-5 ${agentActive ? 'animate-spin-slow' : ''}`} />
+        
+        <span className="relative z-10">
+            {agentLoading ? (
+            <span className="flex items-center gap-1.5">
+                <motion.span 
+                    animate={{ opacity: [0.4, 1, 0.4] }} 
+                    transition={{ repeat: Infinity, duration: 1 }}
+                    className="w-1.5 h-1.5 bg-white rounded-full" 
+                />
+                <motion.span 
+                    animate={{ opacity: [0.4, 1, 0.4] }} 
+                    transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
+                    className="w-1.5 h-1.5 bg-white rounded-full" 
+                />
+                <motion.span 
+                    animate={{ opacity: [0.4, 1, 0.4] }} 
+                    transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
+                    className="w-1.5 h-1.5 bg-white rounded-full" 
+                />
+            </span>
+            ) : agentActive ? 'إيقاف Sigma' : 'تفعيل Sigma'}
+        </span>
+
+        {agentActive && !agentLoading && <Square className="w-4 h-4" />}
+        {!agentActive && !agentLoading && <Play className="w-4 h-4" />}
+      </motion.button>
+
+      {/* Premium Toast-like Error Notification */}
+      <AnimatePresence>
+        {localError && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+            className="
+              absolute top-full mt-3 p-3 min-w-[200px]
+              bg-white/10 backdrop-blur-xl border border-red-500/30
+              rounded-xl shadow-2xl z-[100] flex items-start gap-3
+            "
+          >
+            <div className="bg-red-500/20 p-1.5 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-red-400" />
+            </div>
+            <div className="flex-1">
+                <p className="text-[11px] font-bold text-red-200 uppercase tracking-widest mb-0.5">حدث خطأ</p>
+                <p className="text-sm text-white/90 leading-tight">{localError}</p>
+            </div>
+            <button 
+                onClick={() => setLocalError(null)}
+                className="hover:bg-white/10 p-1 rounded-md transition-colors"
+            >
+                <X className="w-3.5 h-3.5 text-white/40" />
+            </button>
+          </motion.div>
         )}
-      </button>
+      </AnimatePresence>
 
-      {/* Error Message */}
-      {agentError && (
-        <div className="
-          absolute top-full left-0 mt-2 p-3 bg-red-100 text-red-700
-          rounded-lg text-sm max-w-xs z-50 shadow-lg
-        ">
-          ❌ {agentError}
-        </div>
-      )}
-
-      {/* Status Badge */}
+      {/* Active Pulse indicator */}
       {agentActive && (
-        <div className="
-          absolute -top-2 -right-2 w-3 h-3 bg-green-500 rounded-full
-          animate-pulse shadow-lg
-        " title="الوكيل نشط" />
+        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"></span>
+        </span>
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface TrackLike {
   kind?: string;
@@ -16,9 +16,6 @@ interface RemoteParticipantLike {
 
 interface RoomLike {
   remoteParticipants?: Map<string, RemoteParticipantLike>;
-  on: (eventName: string, listener: (...args: unknown[]) => void) => void;
-  off?: (eventName: string, listener: (...args: unknown[]) => void) => void;
-  removeListener?: (eventName: string, listener: (...args: unknown[]) => void) => void;
 }
 
 export interface ParticipantState {
@@ -78,97 +75,48 @@ export function useParticipants({ roomRef, connected }: UseParticipantsOptions):
     if (!connected) {
       setParticipants([]);
       setRemoteCameraMuted(false);
-      return () => {
-        // No room listeners to clean when disconnected.
-      };
+      return;
     }
 
-    const room = roomRef.current as RoomLike | null;
-    if (!room || typeof room.on !== "function") {
-      setParticipants([]);
-      setRemoteCameraMuted(false);
-      return () => {
-        // No room available.
-      };
-    }
+    let cancelled = false;
+    let rafId: number | null = null;
+    let prevParticipants: ParticipantState[] | null = null;
+    let prevCameraMuted = false;
 
-    const sync = () => {
+    const poll = () => {
+      if (cancelled) return;
+
+      const room = roomRef.current as RoomLike | null;
       const current = collectParticipants(room);
-      setParticipants(current);
-
-      const firstRemote = room.remoteParticipants
+      const firstRemote = room?.remoteParticipants
         ? Array.from(room.remoteParticipants.values())[0]
         : undefined;
-      setRemoteCameraMuted(!hasRemoteVideoTrack(firstRemote));
-    };
+      const currentCameraMuted = !hasRemoteVideoTrack(firstRemote);
 
-    const onParticipantConnected = () => {
-      sync();
-    };
-
-    const onParticipantDisconnected = () => {
-      sync();
-    };
-
-    const onTrackMuted = (publication: unknown) => {
-      const cast = publication as TrackPublicationLike | undefined;
-      if (cast?.kind === "video" || cast?.track?.kind === "video") {
-        setRemoteCameraMuted(true);
+      // Use identity comparison instead of expensive JSON.stringify
+      if (prevParticipants !== current) {
+        setParticipants(current);
+        prevParticipants = current;
       }
-    };
-
-    const onTrackUnmuted = (publication: unknown) => {
-      const cast = publication as TrackPublicationLike | undefined;
-      if (cast?.kind === "video" || cast?.track?.kind === "video") {
-        setRemoteCameraMuted(false);
+      if (prevCameraMuted !== currentCameraMuted) {
+        setRemoteCameraMuted(currentCameraMuted);
+        prevCameraMuted = currentCameraMuted;
       }
+
+      rafId = requestAnimationFrame(poll);
     };
 
-    const onTrackPublished = (publication: unknown) => {
-      const cast = publication as TrackPublicationLike | undefined;
-      if (cast?.kind === "video" || cast?.track?.kind === "video") {
-        setRemoteCameraMuted(false);
-      }
-    };
-
-    const onTrackUnpublished = (publication: unknown) => {
-      const cast = publication as TrackPublicationLike | undefined;
-      if (cast?.kind === "video" || cast?.track?.kind === "video") {
-        setRemoteCameraMuted(true);
-      }
-    };
-
-    room.on("participantConnected", onParticipantConnected);
-    room.on("participantDisconnected", onParticipantDisconnected);
-    room.on("trackMuted", onTrackMuted);
-    room.on("trackUnmuted", onTrackUnmuted);
-    room.on("trackPublished", onTrackPublished);
-    room.on("trackUnpublished", onTrackUnpublished);
-
-    sync();
+    rafId = requestAnimationFrame(poll);
 
     return () => {
-      if (room.off) {
-        room.off("participantConnected", onParticipantConnected);
-        room.off("participantDisconnected", onParticipantDisconnected);
-        room.off("trackMuted", onTrackMuted);
-        room.off("trackUnmuted", onTrackUnmuted);
-        room.off("trackPublished", onTrackPublished);
-        room.off("trackUnpublished", onTrackUnpublished);
-      } else if (room.removeListener) {
-        room.removeListener("participantConnected", onParticipantConnected);
-        room.removeListener("participantDisconnected", onParticipantDisconnected);
-        room.removeListener("trackMuted", onTrackMuted);
-        room.removeListener("trackUnmuted", onTrackUnmuted);
-        room.removeListener("trackPublished", onTrackPublished);
-        room.removeListener("trackUnpublished", onTrackUnpublished);
+      cancelled = true;
+      if (rafId != null) {
+        cancelAnimationFrame(rafId);
       }
     };
   }, [connected, roomRef]);
 
-  const remotePeerIdentity = useMemo(() => {
-    return participants.length > 0 ? participants[0].identity : null;
-  }, [participants]);
+  const remotePeerIdentity = participants.length > 0 ? participants[0].identity : null;
 
   return {
     participants,

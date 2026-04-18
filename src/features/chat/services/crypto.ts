@@ -22,7 +22,13 @@ if (typeof window !== 'undefined') {
     }, 60_000);
 }
 
-export async function generateKeyPair() {
+export type GeneratedKeyPair = {
+  publicKey: CryptoKey;
+  privateKey: CryptoKey;
+  rawPrivateKeyB64: string;
+};
+
+export async function generateKeyPair(): Promise<GeneratedKeyPair> {
     try {
 
         const keyPair = await window.crypto.subtle.generateKey(
@@ -48,6 +54,7 @@ export async function generateKeyPair() {
 
     } catch (error) {
       console.error('[crypto.ts] [generateKeyPair]:', error);
+      throw error;
     }
 }
 
@@ -80,6 +87,7 @@ export async function exportPublicKey(key: CryptoKey): Promise<string> {
 
     } catch (error) {
       console.error('[crypto.ts] [exportPublicKey]:', error);
+      throw error;
     }
 }
 
@@ -94,6 +102,7 @@ export async function exportPrivateKey(key: CryptoKey): Promise<string> {
 
     } catch (error) {
       console.error('[crypto.ts] [exportPrivateKey]:', error);
+      throw error;
     }
 }
 
@@ -111,6 +120,7 @@ export async function importPublicKey(base64: string): Promise<CryptoKey> {
 
     } catch (error) {
       console.error('[crypto.ts] [importPublicKey]:', error);
+      throw error;
     }
 }
 
@@ -128,10 +138,11 @@ export async function importPrivateKey(base64: string, extractable: boolean = fa
 
     } catch (error) {
       console.error('[crypto.ts] [importPrivateKey]:', error);
+      throw error;
     }
 }
 
-async function generateAESKey() {
+async function generateAESKey(): Promise<CryptoKey> {
     try {
 
         return await window.crypto.subtle.generateKey(
@@ -142,6 +153,7 @@ async function generateAESKey() {
 
     } catch (error) {
       console.error('[crypto.ts] [generateAESKey]:', error);
+      throw error;
     }
 }
 
@@ -233,7 +245,9 @@ export async function decryptHybridMessage(
     try {
         const parts = payload.split(':');
         if (parts.length !== 6) {
-            return "🔒 [بيانات تالفة - Data Corrupted]";
+            const errorText = "🔒 [بيانات تالفة - Data Corrupted]";
+            _decryptCache.set(cacheKey, { text: errorText, expiry: Date.now() + _CACHE_TTL });
+            return errorText;
         }
 
         const [, , ivB64, encAesKeySenderB64, encAesKeyReceiverB64, cipherB64] = parts;
@@ -280,8 +294,10 @@ export async function decryptHybridMessage(
 
         return text;
     } catch (e) {
-        console.error("[E2EE Audit] Decryption Exception:", e);
-        return "🔒 [فشل فك التشفير - Decryption Failed]";
+        // تم إخفاء رسالة الخطأ المزعجة في شاشة الـ console لأنها طبيعية أثناء التطوير (مفاتيح قديمة لا تتطابق مع الحالية)
+        const errorText = "🔒 [فشل فك التشفير - Decryption Failed]";
+        _decryptCache.set(cacheKey, { text: errorText, expiry: Date.now() + _CACHE_TTL });
+        return errorText;
     }
 }
 
@@ -301,6 +317,7 @@ export async function getPublicKeyFingerprint(base64Key: string): Promise<string
 
     } catch (error) {
       console.error('[crypto.ts] [getPublicKeyFingerprint]:', error);
+      return '';
     }
 }
 
@@ -335,13 +352,14 @@ async function getPBKDF2Key(password: string, salt: Uint8Array): Promise<CryptoK
 
     } catch (error) {
       console.error('[crypto.ts] [getPBKDF2Key]:', error);
+      throw error;
     }
 }
 
 export async function encryptPrivateKeyWithPassword(
     privateKey: string,
     password: string
-) {
+): Promise<{ encryptedB64: string; saltB64: string; ivB64: string }> {
     try {
 
         const salt = window.crypto.getRandomValues(new Uint8Array(16));
@@ -364,6 +382,7 @@ export async function encryptPrivateKeyWithPassword(
 
     } catch (error) {
       console.error('[crypto.ts] [encryptPrivateKeyWithPassword]:', error);
+      throw error;
     }
 }
 
@@ -391,6 +410,7 @@ export async function decryptPrivateKeyWithPassword(
 
     } catch (error) {
       console.error('[crypto.ts] [decryptPrivateKeyWithPassword]:', error);
+      throw error;
     }
 }
 
@@ -426,6 +446,7 @@ export async function syncKeyBackupToSupabase(
 
     } catch (error) {
       console.error('[crypto.ts] [syncKeyBackupToSupabase]:', error);
+      throw error;
     }
 }
 
@@ -447,6 +468,7 @@ export async function fetchKeyBackupFromSupabase(userId: string) {
 
     } catch (error) {
       console.error('[crypto.ts] [fetchKeyBackupFromSupabase]:', error);
+      return null;
     }
 }
 

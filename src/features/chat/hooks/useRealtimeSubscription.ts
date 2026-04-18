@@ -29,7 +29,7 @@ export function useRealtimeSubscription(
     const retryCountRef = useRef(0);
     const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const channelRef = useRef<RealtimeChannel | null>(null);
-    const MAX_RETRIES = 5;
+    const MAX_RETRIES = 10;
 
     const connect = useCallback(() => {
         if (!enabled) return;
@@ -52,18 +52,19 @@ export function useRealtimeSubscription(
                 onMessage(payload);
             })
             .subscribe((subscriptionStatus, error) => {
+                console.log(`[useRealtimeSubscription] Channel: ${channelName}, Status: ${subscriptionStatus}`);
                 if (subscriptionStatus === 'SUBSCRIBED') {
                     setStatus('connected');
                     retryCountRef.current = 0;
                     setRetryCount(0);
                 } else if (subscriptionStatus === 'CHANNEL_ERROR' || subscriptionStatus === 'TIMED_OUT') {
-                    setStatus('disconnected');
+                    // Start reconnecting
                     scheduleRetry();
                 } else if (subscriptionStatus === 'CLOSED') {
                     setStatus('disconnected');
                 }
                 if (error) {
-                    console.error('Realtime subscription error:', error);
+                    console.error('[useRealtimeSubscription] Realtime subscription error:', error);
                 }
             });
 

@@ -65,39 +65,39 @@
 
   .dark,
   [data-theme="dark"] {
-    /* 🌌 Dark Theme - Deep Space, Sleek, Neon glow ✨ */
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 258 90% 66%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 222 47% 15%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 222 47% 15%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 222 47% 15%;
-    --accent-foreground: 258 90% 66%;
+    /* 🌌 Dark Theme - Deep Space, Sleek, Neon glow ✨ -> Now Minimalist */
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 8.6%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 8.6%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 3.9%;
+    --secondary: 0 0% 12.2%;
+    --secondary-foreground: 0 0% 63.1%;
+    --muted: 0 0% 12.2%;
+    --muted-foreground: 0 0% 32.2%;
+    --accent: 0 0% 12.2%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 222 47% 15%;
-    --input: 222 47% 15%;
-    --ring: 258 90% 66%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 14.9%;
 
     /* 🎮 Video Chat UI - Dark Theme */
-    --vc-bg: 222 47% 4%;
-    --vc-surface: 222 47% 8% / 0.92;
-    --vc-panel-bg: 222 47% 8% / 0.95;
-    --vc-panel-border: 222 47% 15% / 0.8;
-    --vc-glass-bg: 255 255% 255% / 0.08;
-    --vc-glass-border: 255 255% 255% / 0.12;
-    --vc-text: 210 40% 98%;
-    --vc-text-secondary: 215 20% 65%;
-    --vc-text-muted: 215 20% 65% / 0.5;
-    --vc-accent: 258 90% 66%;
-    --vc-accent-neon: 199 89% 48%;
+    --vc-bg: 0 0% 3.9%;
+    --vc-surface: 0 0% 8.6%;
+    --vc-panel-bg: 0 0% 8.6%;
+    --vc-panel-border: 0 0% 14.9%;
+    --vc-glass-bg: 0 0% 100% / 0.05;
+    --vc-glass-border: 0 0% 100% / 0.1;
+    --vc-text: 0 0% 100%;
+    --vc-text-secondary: 0 0% 63.1%;
+    --vc-text-muted: 0 0% 32.2%;
+    --vc-accent: 0 0% 100%;
+    --vc-accent-neon: 0 0% 100%;
   }
 }
 
@@ -116,6 +116,15 @@
     width: 100%;
     overflow-x: hidden;
     transition: background-color 0.5s ease, color 0.5s ease;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' x='0px' y='0px' width='24' height='24' viewBox='0 0 30 30' fill='black' stroke='white' stroke-width='1.5'%3E%3Cpath d='M 9 3 A 1 1 0 0 0 8 4 L 8 21 A 1 1 0 0 0 9 22 A 1 1 0 0 0 9.796875 21.601562 L 12.919922 18.119141 L 16.382812 26.117188 C 16.701812 26.855187 17.566828 27.188469 18.298828 26.855469 C 19.020828 26.527469 19.340672 25.678078 19.013672 24.955078 L 15.439453 17.039062 L 21 17 A 1 1 0 0 0 22 16 A 1 1 0 0 0 21.628906 15.222656 L 9.7832031 3.3789062 A 1 1 0 0 0 9 3 z'%3E%3C/path%3E%3C/svg%3E") 8 4, auto;
+  }
+
+  button, 
+  a, 
+  [role="button"],
+  .cursor-pointer {
+    /* More natural Black Pointer (Hand) Cursor */
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' x='0px' y='0px' width='24' height='24' viewBox='0 0 30 30' fill='black' stroke='white' stroke-width='1.5'%3E%3Cpath d='M 11 2 C 9.895 2 9 2.895 9 4 L 9 12 L 9 13 L 9 19.5 C 6.448 18.201 5.289 18 4 18 C 2.503911 18 1.0097445 18.577311 1.0019531 20.486328 L 5.5 22.5 L 8.65625 25.65625 C 10.15625 27.15625 12.192453 28 14.314453 28 L 21 28 C 23.209 28 25 26.209 25 24 L 25 14 A 2 2 0 0 0 23 12 A 2 2 0 0 0 21.193359 13.148438 C 21.066812 13.062233 21 13 21 13 A 2 2 0 0 0 19 11 A 2 2 0 0 0 17 13 L 17 12 C 17 10.895 16.105 10 15 10 C 13.895 10 13 10.895 13 12 L 13 4 C 13 2.895 12.105 2 11 2 z M 1.0019531 20.486328 L 1 20.486328 L 1 20.5 C 1 20.494991 1.0019328 20.491319 1.0019531 20.486328 z'%3E%3C/path%3E%3C/svg%3E") 10 2, pointer !important;
   }
 }
 
@@ -289,6 +298,126 @@
   }
 }
 
+/* ── Banned Page Animations ── */
+@keyframes bannedBgPulse {
+  0%, 100% { background: radial-gradient(ellipse at center, rgba(220,38,38,0.05) 0%, #000 70%); }
+  50% { background: radial-gradient(ellipse at center, rgba(220,38,38,0.15) 0%, #000 70%); }
+}
+
+.banned-bg-animation {
+  animation: bannedBgPulse 2s ease-in-out infinite;
+  will-change: background;
+}
+
+@keyframes bannedBoxPulse {
+  0%, 100% {
+    border-color: rgba(220,38,38,0.2);
+    box-shadow: 0 0 40px -10px rgba(220,38,38,0.2), inset 0 0 20px -20px rgba(220,38,38,0.05);
+  }
+  50% {
+    border-color: rgba(220,38,38,0.6);
+    box-shadow: 0 0 80px -10px rgba(220,38,38,0.5), inset 0 0 40px -20px rgba(220,38,38,0.15);
+  }
+}
+
+.banned-box-animation {
+  animation: bannedBoxPulse 2s ease-in-out infinite;
+  background: rgba(10,10,10,0.95);
+  will-change: border-color, box-shadow;
+}
+
+@keyframes bannedIconBoxPulse {
+  0%, 100% {
+    background: rgba(220,38,38,0.08);
+    box-shadow: 0 0 10px rgba(220,38,38,0.1);
+  }
+  50% {
+    background: rgba(220,38,38,0.15);
+    box-shadow: 0 0 30px rgba(220,38,38,0.4);
+  }
+}
+
+.banned-icon-box-animation {
+  animation: bannedIconBoxPulse 2s ease-in-out infinite;
+  will-change: background, box-shadow;
+}
+
+@keyframes bannedIconPulse {
+  0%, 100% {
+    color: #b91c1c;
+    filter: none;
+  }
+  50% {
+    color: #ef4444;
+    filter: drop-shadow(0 0 12px rgba(239,68,68,0.7));
+  }
+}
+
+.banned-icon-animation {
+  animation: bannedIconPulse 2s ease-in-out infinite;
+  will-change: color, filter;
+}
+
+@keyframes bannedLabelPulse {
+  0%, 100% { background: rgba(220,38,38,0.08); }
+  50% { background: rgba(220,38,38,0.2); }
+}
+
+.banned-label-animation {
+  animation: bannedLabelPulse 2s ease-in-out infinite;
+  color: #f87171;
+  border: 1px solid rgba(220,38,38,0.3);
+  will-change: background;
+}
+
+/* ── Suspense Loader Animations ── */
+@keyframes dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.suspense-loader-path {
+  stroke-dasharray: 400;
+  stroke-dashoffset: 400;
+  animation: dash 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes loaderPulseRing {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.suspense-loader-ring {
+  animation: loaderPulseRing 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+  will-change: transform, opacity;
+}
+
+@keyframes loaderDotPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+.suspense-loader-dot:nth-child(1) { animation: loaderDotPulse 1s infinite 0s; }
+.suspense-loader-dot:nth-child(2) { animation: loaderDotPulse 1s infinite 0.2s; }
+.suspense-loader-dot:nth-child(3) { animation: loaderDotPulse 1s infinite 0.4s; }
+
+/* ── Shiny Text Light Performance Animation ── */
+@keyframes shinyTextLight {
+    0% { background-position: 200% center; }
+    100% { background-position: -200% center; }
+}
+
+.shiny-text-light {
+    background: linear-gradient(120deg, #888888 35%, #ffffff 50%, #888888 65%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shinyTextLight 6s linear infinite;
+    display: inline-block;
+}
+
 /* ── Chat Input Transparent Selection ── */
 /* Hide the native unicode emoji from appearing when user selects text in the chat textarea.
    The overlay (EmojiText) handles the visual rendering; the textarea must stay fully invisible. */
@@ -392,4 +521,78 @@ textarea.text-transparent::-moz-selection {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(155, 155, 155, 0.6);
+}
+
+/* AI Agent Animations */
+@keyframes ai-active-pulse {
+  0% { border-color: rgba(255, 255, 255, 0.4); box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.1); }
+  50% { border-color: rgba(255, 255, 255, 0.8); box-shadow: inset 0 0 50px rgba(255, 255, 255, 0.3); }
+  100% { border-color: rgba(255, 255, 255, 0.4); box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.1); }
+}
+
+@keyframes bubble-pop-in {
+  0% { transform: scale(0.8) translateY(10px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes ai-msg-slide-in {
+  0% { transform: translateY(12px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes bubble-slide-from-left {
+  0% {
+    transform: translate3d(-32px, 8px, 0) scale(0.96);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bubble-slide-from-right {
+  0% {
+    transform: translate3d(32px, 8px, 0) scale(0.96);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bubble-glass-float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes ai-cursor-blink {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes ai-flash-anim {
+  0% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+
+@keyframes local-translation-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 10px 24px rgba(37,99,235,0.35), 0 0 0 0 rgba(79,70,229,0.55);
+  }
+  70% {
+    transform: scale(1.04);
+    box-shadow: 0 12px 28px rgba(37,99,235,0.45), 0 0 0 12px rgba(79,70,229,0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 10px 24px rgba(37,99,235,0.35), 0 0 0 0 rgba(79,70,229,0);
+  }
 }

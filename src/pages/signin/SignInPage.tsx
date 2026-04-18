@@ -23,13 +23,14 @@ export default function SignInPage({
   const { setBaseTitle } = useTitle();
 
   useEffect(() => {
-    setBaseTitle('Sign In • SkillSwap');
+    setBaseTitle('Sign In • JUST Social');
   }, [setBaseTitle]);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError("");
     try {
+      localStorage.setItem('auth_provider', 'google');
       await signInWithGoogle();
     } catch (err: any) {
       setError(err.message || "An error occurred during Google sign in");
@@ -41,6 +42,7 @@ export default function SignInPage({
     setIsLoading(true);
     setError("");
     try {
+      localStorage.setItem('auth_provider', 'facebook');
       await signInWithFacebook();
     } catch (err: any) {
       setError(err.message || "An error occurred during Facebook sign in");
@@ -111,7 +113,7 @@ export default function SignInPage({
           <div>
             <h2 className="text-xl font-bold text-foreground">Welcome Back</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Sign in to your SkillSwap account
+              Sign in to your JUST Social account
             </p>
           </div>
           {onClose && (
@@ -130,9 +132,8 @@ export default function SignInPage({
             Email Address
           </Label>
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-300" />
-            <div className="relative flex items-center gap-3 bg-input rounded-lg px-4 h-12 w-full border border-border group-hover:border-ring/50 transition-colors">
-              <Mail className="h-4 w-4 text-blue-400/70 shrink-0" />
+            <div className="relative flex items-center gap-3 bg-[#161616] rounded-lg px-4 h-12 w-full border border-[#262626] group-hover:border-[#3a3a3a] transition-colors">
+              <Mail className="h-4 w-4 text-[#A1A1A1] shrink-0" />
               <input
                 id="email"
                 type="email"
@@ -152,9 +153,8 @@ export default function SignInPage({
             Password
           </Label>
           <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-300" />
-            <div className="relative flex items-center gap-3 bg-input rounded-lg px-4 h-12 w-full border border-border group-hover:border-ring/50 transition-colors">
-              <Lock className="h-4 w-4 text-purple-400/70 shrink-0" />
+            <div className="relative flex items-center gap-3 bg-[#161616] rounded-lg px-4 h-12 w-full border border-[#262626] group-hover:border-[#3a3a3a] transition-colors">
+              <Lock className="h-4 w-4 text-[#A1A1A1] shrink-0" />
               <input
                 id="password"
                 type="password"
@@ -181,7 +181,7 @@ export default function SignInPage({
               checked={rememberMe}
               onCheckedChange={(checked) => setRememberMe(checked as boolean)}
               disabled={isLoading}
-              className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-blue-500"
+              className="border-[#262626] data-[state=checked]:bg-[#FFFFFF] data-[state=checked]:border-[#FFFFFF]"
             />
             <Label
               htmlFor="remember"
@@ -191,7 +191,7 @@ export default function SignInPage({
             </Label>
           </div>
           <button
-            className="text-sm text-blue-400 hover:text-blue-300 hover:underline transition-colors"
+            className="text-sm text-[#A1A1A1] hover:text-[#FFFFFF] hover:underline transition-colors"
             disabled={isLoading}
           >
             Forgot password?
@@ -209,7 +209,7 @@ export default function SignInPage({
         <button
           onClick={handleSubmit}
           disabled={isLoading}
-          className="w-full h-12 text-base font-semibold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-[0_0_20px_rgba(59,130,246,0.4)]"
+          className="w-full h-12 text-base font-semibold rounded-xl bg-[#FFFFFF] text-[#0A0A0A] hover:bg-[#E2E2E2] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
         >
           {isLoading ? "Signing in..." : "Sign In"}
         </button>
@@ -257,11 +257,11 @@ export default function SignInPage({
         </div>
 
         {/* Signup link */}
-        <p className="text-center text-sm text-muted-foreground/50 mt-1">
+        <p className="text-center text-sm text-[#525252] mt-1">
           Don't have an account?{" "}
           <span
             onClick={onSwitchToSignUp}
-            className="text-blue-400 cursor-pointer hover:text-blue-300 hover:underline font-medium transition-colors"
+            className="text-[#FFFFFF] cursor-pointer hover:underline font-medium transition-colors"
           >
             Sign Up
           </span>

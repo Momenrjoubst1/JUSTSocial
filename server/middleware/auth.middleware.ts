@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { supabase } from '../services/supabase.service.js';
 import { createLogger } from '../utils/logger.js';
+import redis from '../config/redis-client.js';
 
 const logger = createLogger('auth-middleware');
 
@@ -52,40 +53,67 @@ export async function authMiddleware(
   }
 
   try {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const cacheKey = `auth:session:${token}`;
+    // Attempt to get cached session, swallow redis errors to fallback to DB
+    const cachedSessionStr = await redis.get(cacheKey).catch(() => null);
 
-    if (error || !user) {
-      // Secure Audit Logging: Never log the full token!
-      const tokenPreview = token?.substring(0, 15) + '...';
-      logger.warn('Auth failed (Invalid token)', {
-        ip: req.ip,
-        userAgent: req.get('User-Agent')?.substring(0, 100),
-        tokenPreview,
-        reason: error?.message || 'invalid_token',
-        timestamp: new Date().toISOString()
-      });
+    let user: any = null;
+    let isBanned = false;
+    let bannedUntil = null;
 
-      res.status(401).json({
-        error: 'Unauthorized',
-        message: 'Invalid or expired token',
-      });
-      return;
+    if (cachedSessionStr) {
+      const cached = JSON.parse(cachedSessionStr);
+      user = cached.user;
+      isBanned = cached.isBanned;
+      bannedUntil = cached.bannedUntil;
+    } else {
+      const { data: authData, error } = await supabase.auth.getUser(token);
+
+      if (error || !authData?.user) {
+        // Secure Audit Logging: Never log the full token!
+        const tokenPreview = token?.substring(0, 15) + '...';
+        logger.warn('Auth failed (Invalid token)', {
+          ip: req.ip,
+          userAgent: req.get('User-Agent')?.substring(0, 100),
+          tokenPreview,
+          reason: error?.message || 'invalid_token',
+          timestamp: new Date().toISOString()
+        });
+
+        res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Invalid or expired token',
+        });
+        return;
+      }
+
+      user = authData.user;
+
+      // Check if user is banned (Check both Auth metadata and Database active bans)
+      const isAuthBanned = user.banned_until && new Date(user.banned_until) > new Date();
+      
+      const { data: banRecord } = await supabase
+        .from('banned_users')
+        .select('banned_until')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .gt('banned_until', new Date().toISOString())
+        .maybeSingle();
+
+      isBanned = isAuthBanned || !!banRecord;
+      bannedUntil = isAuthBanned ? user.banned_until : banRecord?.banned_until;
+
+      // Cache validation result in Redis for 5 minutes
+      await redis.set(
+        cacheKey,
+        JSON.stringify({ user, isBanned, bannedUntil }),
+        'EX',
+        300
+      ).catch(err => logger.error('Redis cache set error', { err }));
     }
 
-    // Check if user is banned (Check both Auth metadata and Database active bans)
-    const isAuthBanned = user.banned_until && new Date(user.banned_until) > new Date();
-    
-    const { data: banRecord } = await supabase
-      .from('banned_users')
-      .select('banned_until')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .gt('banned_until', new Date().toISOString())
-      .maybeSingle();
-
-    if (isAuthBanned || banRecord) {
-      const until = isAuthBanned ? user.banned_until : banRecord?.banned_until;
-      logger.warn('Banned user attempted access', { userId: user.id, bannedUntil: until });
+    if (isBanned) {
+      logger.warn('Banned user attempted access', { userId: user.id, bannedUntil });
       res.status(403).json({
         error: 'Forbidden',
         message: 'Account suspended',

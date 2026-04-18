@@ -13,7 +13,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { CONFIG } from "./types";
 
-const MODERATION_INTERVAL = 10_000; // 10 seconds
+const MODERATION_INTERVAL = 20_000; // 20 seconds
 
 export interface BanInfo {
   banned: boolean;
@@ -61,6 +61,7 @@ export function useModeration({
   const [reportLoading, setReportLoading] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
   const moderationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const reportingRef = useRef(false); // idempotency guard for report submissions
   const onBannedRef = useRef(onBanned);
   onBannedRef.current = onBanned;
 
@@ -96,19 +97,22 @@ export function useModeration({
     }
 
     const captureAndModerate = async () => {
+      // Skip when tab is hidden — no point capturing invisible video
+      if (document.visibilityState === 'hidden') return;
+
       const video = remoteVideoRef.current;
       if (!video || video.videoWidth === 0 || video.videoHeight === 0) return;
 
       try {
         // Capture frame from remote video
         const canvas = document.createElement('canvas');
-        canvas.width = Math.min(video.videoWidth, 320); // downscale for speed
+        canvas.width = Math.min(video.videoWidth, 240); // downscale for speed
         canvas.height = Math.round(canvas.width * (video.videoHeight / video.videoWidth));
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const base64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
+        const base64 = canvas.toDataURL('image/jpeg', 0.4).split(',')[1];
 
         // Send to moderation API
         const res = await fetch(`${CONFIG.MODERATION_API_URL}/moderate`, {
@@ -146,7 +150,7 @@ export function useModeration({
       if (moderationTimerRef.current) clearInterval(moderationTimerRef.current);
       clearTimeout(initialTimeout);
     };
-  }, [connected, fingerprint, identity, userId, roomName, remoteVideoRef]);
+  }, [connected, fingerprint, identity, userId, roomName]);
 
   /* ── Report user ────────────────────────────────────────────────────── */
   const reportUser = useCallback(async (opts: {
@@ -157,6 +161,9 @@ export function useModeration({
     description?: string;
   }) => {
     if (!userId) return { ok: false };
+    // Idempotency guard — prevent multiple simultaneous submissions
+    if (reportingRef.current) return { ok: false };
+    reportingRef.current = true;
 
     let base64 = undefined;
     const video = remoteVideoRef.current;
@@ -178,7 +185,13 @@ export function useModeration({
     setReportLoading(true);
     setReportSuccess(false);
     try {
-      const res = await fetch(`${CONFIG.MODERATION_API_URL}/report`, {
+      const moderationApiUrl = CONFIG.MODERATION_API_URL;
+      if (!moderationApiUrl || typeof moderationApiUrl !== 'string' || !moderationApiUrl.startsWith('http')) {
+        console.error('Moderation API URL is misconfigured:', moderationApiUrl);
+        return { ok: false };
+      }
+
+      const res = await fetch(`${moderationApiUrl}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -202,13 +215,20 @@ export function useModeration({
       return { ok: false };
     } finally {
       setReportLoading(false);
+      reportingRef.current = false;
     }
-  }, [userId, roomName, remoteVideoRef]);
+  }, [userId, roomName]);
 
   /* ── Moderate Text ──────────────────────────────────────────────────── */
   const moderateText = useCallback(async (text: string): Promise<{ safe: boolean; reason?: string; warning?: string }> => {
     try {
-      const res = await fetch(`${CONFIG.MODERATION_API_URL}/moderate-text`, {
+      const moderationApiUrl = CONFIG.MODERATION_API_URL;
+      if (!moderationApiUrl || typeof moderationApiUrl !== 'string' || !moderationApiUrl.startsWith('http')) {
+        console.error('Moderation API URL is misconfigured:', moderationApiUrl);
+        return { safe: true }; // fail open
+      }
+
+      const res = await fetch(`${moderationApiUrl}/moderate-text`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, userId, fingerprint }),
@@ -243,7 +263,13 @@ export function useModeration({
   /* ── Moderate Image (e.g. for Avatars) ──────────────────────────────── */
   const moderateImage = useCallback(async (base64: string) => {
     try {
-      const res = await fetch(`${CONFIG.MODERATION_API_URL}/moderate`, {
+      const moderationApiUrl = CONFIG.MODERATION_API_URL;
+      if (!moderationApiUrl || typeof moderationApiUrl !== 'string' || !moderationApiUrl.startsWith('http')) {
+        console.error('Moderation API URL is misconfigured:', moderationApiUrl);
+        return { safe: true }; // fail open
+      }
+
+      const res = await fetch(`${moderationApiUrl}/moderate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageBase64: base64, userId, fingerprint }),

@@ -3,14 +3,15 @@ import { motion } from "framer-motion";
 import { Zap, Video, MessageSquare, Code2, Gamepad2, Shield, Rocket } from "lucide-react";
 import { FeatureItem } from "./FeatureItem";
 
+// Minimalist mono gradients — subtle white-on-dark
 const featureGradients = [
-  "from-indigo-500 to-blue-600",
-  "from-cyan-500 to-teal-600",
-  "from-purple-500 to-pink-600",
-  "from-amber-500 to-orange-600",
-  "from-emerald-500 to-green-600",
-  "from-rose-500 to-red-600",
-  "from-violet-500 to-fuchsia-600",
+  "from-white/10 to-white/5",
+  "from-white/10 to-white/5",
+  "from-white/10 to-white/5",
+  "from-white/10 to-white/5",
+  "from-white/10 to-white/5",
+  "from-white/10 to-white/5",
+  "from-white/10 to-white/5",
 ];
 
 export const FeaturesSection = ({ t }: { t: any }) => {
@@ -22,7 +23,7 @@ export const FeaturesSection = ({ t }: { t: any }) => {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-indigo-500/20 text-primary-foreground text-xs font-bold tracking-widest uppercase mb-6"
+            className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1F1F1F] border border-[#262626] text-[#A1A1A1] text-xs font-bold tracking-widest uppercase mb-6"
           >
             <Zap className="w-3.5 h-3.5" />
             {String(t("landing.nav.features"))}
@@ -32,10 +33,10 @@ export const FeaturesSection = ({ t }: { t: any }) => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight"
+            className="text-4xl md:text-6xl font-bold text-[#FFFFFF] mb-6 leading-tight"
           >
             {String(t("landing.features.title")).split(String(t("landing.features.highlightWord")))[0]}
-            <span className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+            <span className="text-[#A1A1A1]">
               {String(t("landing.features.highlightWord"))}
             </span>
             {String(t("landing.features.title")).split(String(t("landing.features.highlightWord")))[1] || ""}
@@ -45,7 +46,7 @@ export const FeaturesSection = ({ t }: { t: any }) => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.2 }}
-            className="text-foreground/40 text-lg max-w-2xl mx-auto"
+            className="text-[#525252] text-lg max-w-2xl mx-auto"
           >
             {String(t("landing.features.description"))}
           </motion.p>

@@ -62,14 +62,14 @@ export default function ProfilePage({ email, onClose }: ProfilePageProps) {
   const { setBaseTitle } = useTitle();
 
   useEffect(() => {
-    setBaseTitle('Profile • SkillSwap');
+    setBaseTitle('Profile • JUST Social');
   }, [setBaseTitle]);
 
   return (
     <>
       <SEO
-        title={`${fullName || email?.split("@")[0] || "Profile"} | SkillSwap`}
-        description={bio || "Check out this SkillSwap profile. Connect and start a secure skill exchange!"}
+        title={`${fullName || email?.split("@")[0] || "Profile"} | JUST Social`}
+        description={bio || "Check out this JUST Social profile. Connect and start a secure exchange!"}
         image={profileImage || undefined}
       />
       <div className="fixed inset-0 bg-background z-50 overflow-hidden flex flex-col">

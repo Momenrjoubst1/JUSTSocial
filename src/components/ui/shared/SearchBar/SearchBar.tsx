@@ -167,7 +167,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                 <div className="search-result-name" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   {user.full_name || 'Anonymous User'}
                   {isUserVerified(user.email) && <VerifiedBadge size={14} />}
-                  {user.username && <span className="text-xs text-muted-foreground ml-2">@{user.username}</span>}
+                  {user.username && <span className="text-xs text-muted-foreground ms-2">@{user.username}</span>}
                 </div>
                 <div className="search-result-email">{user.email}</div>
               </div>

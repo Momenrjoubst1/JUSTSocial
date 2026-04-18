@@ -10,9 +10,9 @@ interface SEOProps {
 }
 
 export const SEO: React.FC<SEOProps> = ({
-  title = "SkillSwap | Encrypted Skill Exchange",
+  title = "JUST Social | Encrypted Connection Platform",
   description = "Learn new skills and share your expertise in a completely secure, E2EE environment. Privacy-first, always.",
-  keywords = "SkillSwap, Encrypted Chat, Skill Exchange, P2P Learning, Secure Video Call, Privacy",
+  keywords = "JUST Social, Encrypted Chat, Secure Connection, P2P Learning, Privacy",
   image = "/og-image.png",
   url = "https://skillswap.cloud",
 }) => {

@@ -72,27 +72,56 @@ export function CallProvider({ children }: { children: ReactNode }) {
     const mergerCtxRef = useRef<AudioContext | null>(null);
     const watermarkedTrackRef = useRef<MediaStreamTrack | null>(null);
     const dataChannelRef = useRef<RTCDataChannel | null>(null);
+    const localStreamRef = useRef<MediaStream | null>(null);
+    const blobUrlsRef = useRef<string[]>([]);
+    const callStatusRef = useRef<CallData['status']>('idle');
+    const partnerIdRef = useRef<string | null>(null);
+
+    // Sync localStreamRef with state every render to avoid stale closures
+    useEffect(() => {
+        if (callData.localStream) {
+            localStreamRef.current = callData.localStream;
+        }
+    });
+
+    // Keep callStatusRef in sync so signaling handler doesn't need callData.status in deps
+    callStatusRef.current = callData.status;
+    partnerIdRef.current = callData.partnerId;
 
     const endCallUI = useCallback(() => {
         if (pcRef.current) {
             pcRef.current.close();
             pcRef.current = null;
         }
-        if (callData.localStream) {
-            callData.localStream.getTracks().forEach(t => t.stop());
+        // Use ref to avoid stale closure when called from cleanup functions
+        if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(t => t.stop());
+            localStreamRef.current = null;
         }
-        
+
+        // Revoke all Blob URLs to prevent memory leaks
+        blobUrlsRef.current.forEach(url => {
+            try { URL.revokeObjectURL(url); } catch { }
+        });
+        blobUrlsRef.current = [];
+
         stopTimer();
 
-        if (verificationIntervalRef.current) clearInterval(verificationIntervalRef.current);
-        if (watermarkIntervalRef.current) clearInterval(watermarkIntervalRef.current);
-        
-        if (localAudioCtxRef.current) localAudioCtxRef.current.close().catch(() => {});
-        if (remoteAudioCtxRef.current) remoteAudioCtxRef.current.close().catch(() => {});
-        if (splitterCtxRef.current) splitterCtxRef.current.close().catch(() => {});
-        if (mergerCtxRef.current) mergerCtxRef.current.close().catch(() => {});
-        
-        if (watermarkedTrackRef.current) watermarkedTrackRef.current.stop();
+        if (verificationIntervalRef.current) {
+            clearInterval(verificationIntervalRef.current);
+            verificationIntervalRef.current = null;
+        }
+        if (watermarkIntervalRef.current) {
+            clearInterval(watermarkIntervalRef.current);
+            watermarkIntervalRef.current = null;
+        }
+
+        if (localAudioCtxRef.current) { localAudioCtxRef.current.close().catch(() => { }); localAudioCtxRef.current = null; }
+        if (remoteAudioCtxRef.current) { remoteAudioCtxRef.current.close().catch(() => { }); remoteAudioCtxRef.current = null; }
+        if (splitterCtxRef.current) { splitterCtxRef.current.close().catch(() => { }); splitterCtxRef.current = null; }
+        if (mergerCtxRef.current) { mergerCtxRef.current.close().catch(() => { }); mergerCtxRef.current = null; }
+
+        if (watermarkedTrackRef.current) { watermarkedTrackRef.current.stop(); watermarkedTrackRef.current = null; }
 
         geoHashRef.current = null;
         pendingOfferDataRef.current = null;
@@ -113,7 +142,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
             isHumanVerified: false,
             multiPathState: 'inactive'
         });
-    }, [callData.localStream, stopTimer]);
+    }, [stopTimer]);
 
     const sendSignal = useCallback(async (to: string, type: string, data?: string, extra?: Record<string, any>) => {
         if (!user) return;
@@ -145,7 +174,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
             const { type, from, data, callerName, callerAvatar } = payload;
 
             if (type === 'offer') {
-                if (pcRef.current || callData.status !== 'idle') {
+                if (pcRef.current || callStatusRef.current !== 'idle') {
                     const busyChannel = supabase.channel(`call-user-${from}`);
                     busyChannel.subscribe((status) => {
                         if (status === 'SUBSCRIBED') {
@@ -195,7 +224,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
 
         myChannel.subscribe();
         return () => { supabase.removeChannel(myChannel); };
-    }, [user, callData.status, endCallUI, startTimer]);
+    }, [user, endCallUI, startTimer]);
 
     // Internal methods moved from useWebRTC
     const setupMultiPathSplitter = async (stream: MediaStream) => {
@@ -253,8 +282,13 @@ export function CallProvider({ children }: { children: ReactNode }) {
             `;
             const blob = new Blob([workletCode], { type: 'application/javascript' });
             const url = URL.createObjectURL(blob);
-            await audioCtx.audioWorklet.addModule(url);
-            URL.revokeObjectURL(url);
+            blobUrlsRef.current.push(url);
+            try {
+                await audioCtx.audioWorklet.addModule(url);
+            } finally {
+                URL.revokeObjectURL(url);
+                blobUrlsRef.current = blobUrlsRef.current.filter(u => u !== url);
+            }
 
             const source = audioCtx.createMediaStreamSource(stream);
             const splitterNode = new AudioWorkletNode(audioCtx, 'splitter-processor');
@@ -264,7 +298,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
                 if (dataChannelRef.current && dataChannelRef.current.readyState === 'open') {
                     try {
                         dataChannelRef.current.send(JSON.stringify({ seq: e.data.seq, payload: Array.from(e.data.payload) }));
-                    } catch (err) { }
+                    } catch (e) { console.warn("Cleaned up error:", e); }
                 }
             };
 
@@ -342,8 +376,13 @@ export function CallProvider({ children }: { children: ReactNode }) {
             `;
             const blob = new Blob([workletCode], { type: 'application/javascript' });
             const url = URL.createObjectURL(blob);
-            await audioCtx.audioWorklet.addModule(url);
-            URL.revokeObjectURL(url);
+            blobUrlsRef.current.push(url);
+            try {
+                await audioCtx.audioWorklet.addModule(url);
+            } finally {
+                URL.revokeObjectURL(url);
+                blobUrlsRef.current = blobUrlsRef.current.filter(u => u !== url);
+            }
 
             const source = audioCtx.createMediaStreamSource(stream);
             const mergerNode = new AudioWorkletNode(audioCtx, 'merger-processor');
@@ -359,7 +398,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
                         try {
                             const data = JSON.parse(e.data);
                             mergerNode.port.postMessage({ seq: data.seq, payload: new Float32Array(data.payload) });
-                        } catch (err) { }
+                        } catch (e) { console.warn("Cleaned up error:", e); }
                     };
                     return true;
                 }
@@ -426,8 +465,13 @@ export function CallProvider({ children }: { children: ReactNode }) {
             `;
             const blob = new Blob([workletCode], { type: 'application/javascript' });
             const url = URL.createObjectURL(blob);
-            await audioCtx.audioWorklet.addModule(url);
-            URL.revokeObjectURL(url);
+            blobUrlsRef.current.push(url);
+            try {
+                await audioCtx.audioWorklet.addModule(url);
+            } finally {
+                URL.revokeObjectURL(url);
+                blobUrlsRef.current = blobUrlsRef.current.filter(u => u !== url);
+            }
 
             const source = audioCtx.createMediaStreamSource(stream);
             const workletNode = new AudioWorkletNode(audioCtx, 'watermark-processor');
@@ -461,7 +505,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
 
                         if (maxFractionLost > 0.05 || rtt > 0.3) amplitude = WATERMARK_CONFIG.AMPLITUDE.STRONG;
                         else if (maxFractionLost > 0.01 || rtt > 0.1) amplitude = WATERMARK_CONFIG.AMPLITUDE.MODERATE;
-                    } catch (e) {}
+                    } catch (e) { console.warn("Cleaned up error:", e); }
                 }
 
                 workletNode.port.postMessage({ freq, amplitude });
@@ -538,7 +582,26 @@ export function CallProvider({ children }: { children: ReactNode }) {
 
             setCallData(prev => ({ ...prev, isGeoSecure: true }));
 
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                setCallData(prev => ({
+                    ...prev,
+                    status: 'geo_failed',
+                    geoFailMessage: 'Audio capture is not available on this device'
+                }));
+                return;
+            }
+
+            let stream: MediaStream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            } catch (err) {
+                setCallData(prev => ({
+                    ...prev,
+                    status: 'geo_failed',
+                    geoFailMessage: 'Failed to access microphone. Please grant permission and try again.'
+                }));
+                return;
+            }
 
             setCallData(prev => ({
                 ...prev,
@@ -559,7 +622,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
                     try {
                         const encryptedCandidate = await encryptCallSignal(e.candidate, geoHashRef.current);
                         sendSignal(partnerId, 'ice-candidate', encryptedCandidate);
-                    } catch (err) { }
+                    } catch (e) { console.warn("Cleaned up error:", e); }
                 }
             };
 
@@ -593,17 +656,18 @@ export function CallProvider({ children }: { children: ReactNode }) {
                 callerAvatar: user.user_metadata?.avatar_url || ''
             });
         } catch (err) {
+            const message = err instanceof Error ? err.message : 'An unexpected error occurred while starting the call';
             setCallData(prev => ({
                 ...prev,
                 status: 'geo_failed',
-                geoFailMessage: 'Geometric security check failed'
+                geoFailMessage: message
             }));
             setTimeout(endCallUI, 3000);
         }
     };
 
     const acceptCall = async () => {
-        const pId = callData.partnerId;
+        const pId = partnerIdRef.current;
         if (!pId) return;
 
         setCallData(prev => ({ ...prev, status: 'checking_geo', isGeoSecure: false, geoFailMessage: null }));
@@ -626,7 +690,30 @@ export function CallProvider({ children }: { children: ReactNode }) {
 
             setCallData(prev => ({ ...prev, isGeoSecure: true }));
 
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                setCallData(prev => ({
+                    ...prev,
+                    status: 'geo_failed',
+                    geoFailMessage: 'Audio capture is not available on this device'
+                }));
+                sendSignal(pId, 'end');
+                setTimeout(endCallUI, 3000);
+                return;
+            }
+
+            let stream: MediaStream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            } catch (err) {
+                setCallData(prev => ({
+                    ...prev,
+                    status: 'geo_failed',
+                    geoFailMessage: 'Failed to access microphone. Please grant permission and try again.'
+                }));
+                sendSignal(pId, 'end');
+                setTimeout(endCallUI, 3000);
+                return;
+            }
             setCallData(prev => ({ ...prev, localStream: stream, status: 'connected' }));
 
             const iceServers = await fetchIceServers();
@@ -646,7 +733,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
                     try {
                         const encryptedCandidate = await encryptCallSignal(e.candidate, geoHashRef.current);
                         sendSignal(pId, 'ice-candidate', encryptedCandidate);
-                    } catch (err) { }
+                    } catch (e) { console.warn("Cleaned up error:", e); }
                 }
             };
 
@@ -683,34 +770,43 @@ export function CallProvider({ children }: { children: ReactNode }) {
                 try {
                     const cand = await decryptCallSignal(encCand, geoHash);
                     if (pc.remoteDescription) await pc.addIceCandidate(new RTCIceCandidate(cand));
-                } catch (e) {}
+                } catch (e) { console.warn("Cleaned up error:", e); }
             }
             pendingIceCandidatesRef.current = [];
         } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to accept the call';
+            setCallData(prev => ({
+                ...prev,
+                status: 'geo_failed',
+                geoFailMessage: message
+            }));
             endCallUI();
         }
     };
 
     const declineCall = useCallback(() => {
-        if (callData.partnerId) sendSignal(callData.partnerId, 'end');
+        const pid = partnerIdRef.current;
+        if (pid) sendSignal(pid, 'end');
         endCallUI();
-    }, [callData.partnerId, sendSignal, endCallUI]);
+    }, [sendSignal, endCallUI]);
 
     const endCall = useCallback(() => {
-        if (callData.partnerId) sendSignal(callData.partnerId, 'end');
+        const pid = partnerIdRef.current;
+        if (pid) sendSignal(pid, 'end');
         endCallUI();
-    }, [callData.partnerId, sendSignal, endCallUI]);
+    }, [sendSignal, endCallUI]);
 
     const toggleMuteLocal = useCallback(() => {
-        if (callData.localStream) {
-            const audioTrack = callData.localStream.getAudioTracks()[0];
+        const stream = localStreamRef.current;
+        if (stream) {
+            const audioTrack = stream.getAudioTracks()[0];
             if (audioTrack) {
                 audioTrack.enabled = !audioTrack.enabled;
                 setCallData(prev => ({ ...prev, isMuted: !audioTrack.enabled }));
                 if (watermarkedTrackRef.current) watermarkedTrackRef.current.enabled = audioTrack.enabled;
             }
         }
-    }, [callData.localStream]);
+    }, []);
 
     return (
         <CallContext.Provider value={{
@@ -731,3 +827,4 @@ export function useCallContext() {
     if (!context) throw new Error("useCallContext must be used within CallProvider");
     return context;
 }
+

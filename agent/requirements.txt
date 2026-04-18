@@ -1,15 +1,20 @@
-# LiveKit AI Agent — Phi-4 Multimodal (Azure) + Deepgram STT + ElevenLabs TTS
+# LiveKit AI Agent — Text + Vision + Voice
 # Python >= 3.10
 
-# LiveKit
+# LiveKit Core
 livekit-agents[silero,turn-detector]>=1.4.0
 livekit-api>=0.8.0
 livekit-plugins-deepgram>=1.4.0
 livekit-plugins-elevenlabs>=1.3.0
+livekit-plugins-openai>=1.4.0
+livekit-plugins-azure>=1.4.0
 
 # Azure AI (Phi-4 multimodal)
 azure-ai-inference>=1.0.0b2
 azure-core>=1.29.0
+
+# HTTP Client
+aiohttp>=3.9.0
 
 # Utilities
 python-dotenv>=1.0.0

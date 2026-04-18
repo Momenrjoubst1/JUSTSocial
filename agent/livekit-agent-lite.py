@@ -108,7 +108,18 @@ async def run_agent(room_name: str):
             await session.generate_reply(instructions="قل: أهلاً بك، أنا النسخة الخفيفة، كيف أقدر أساعدك؟")
             while room.isconnected(): await asyncio.sleep(1)
         except Exception as e: logger.error(f"Error: {e}")
-        finally: await room.disconnect()
+        finally:
+            await room.disconnect()
+            import gc
+            gc.collect()
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    logger.info("Cleared PyTorch GPU cache to prevent memory leaks.")
+            except ImportError:
+                pass
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1: asyncio.run(run_agent(sys.argv[1]))

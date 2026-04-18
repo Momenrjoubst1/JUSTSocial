@@ -18,7 +18,6 @@ import { useE2EE } from '../../hooks/useE2EE';
 import { getPublicKeyFingerprint, decryptHybridMessage } from '../../services/crypto';
 import { useSendMessage } from '../../hooks/useSendMessage';
 import { useWebRTC, CallOverlay } from '@/features/calls';
-import { SmartTour } from './SmartTour';
 import { useChatEvents } from '../../hooks/useChatEvents';
 import { useChatSound } from '../../hooks/useChatSound';
 import { ChatHanger } from '../atoms/ChatHanger';
@@ -118,7 +117,6 @@ export function ChatWindow() {
 
     const { callData, startCall, acceptCall, declineCall, endCall, toggleMuteLocal } = useWebRTC();
 
-    const [showTour, setShowTour] = useState(false);
     const [showMediaGallery, setShowMediaGallery] = useState(false);
     const [localChatHanger, setLocalChatHanger] = useState<string | null>(null);
 
@@ -146,18 +144,6 @@ export function ChatWindow() {
         }
     }, [activeChat?.id]);
 
-    useEffect(() => {
-        const hasSeenTour = localStorage.getItem('skillswap_tour_seen');
-        if (!hasSeenTour) {
-            setShowTour(true);
-        }
-    }, []);
-
-    const completeTour = () => {
-        localStorage.setItem('skillswap_tour_seen', 'true');
-        setShowTour(false);
-    };
-
     const { user } = useAuthContext();
     const { privateChatSecurity } = useSecurityContext();
     const { playPopSound } = useChatSound();
@@ -175,13 +161,13 @@ export function ChatWindow() {
                     console.error("Failed to decrypt real-time message", err);
                 }
                 const decryptedMsg = { ...msg, encryptedContent: decryptedText };
-                
+
                 setAllMessages(prev => {
                     const chatArray = prev[activeChat.id] || [];
                     // Deduplicate existing + incoming by ID
                     const existingMap = new Map();
                     chatArray.forEach(m => existingMap.set(m.id, m));
-                    
+
                     // If we already have the optimistic version, replace it, otherwise append.
                     let isNew = false;
                     if (msg.metadata?.tempId && existingMap.has(msg.metadata.tempId)) {
@@ -190,28 +176,28 @@ export function ChatWindow() {
                         isNew = true;
                     }
                     existingMap.set(decryptedMsg.id, decryptedMsg);
-                    
+
                     if (isNew) {
-                         const isMe = msg.senderId === user.id;
-                         playPopSound(isMe ? 'send' : 'receive');
-                         
-                         // Update contact snippet properly with decrypted text
-                         const isImage = decryptedText.startsWith('[IMAGE]');
-                         const isAudio = decryptedText.startsWith('[AUDIO]');
-                         const isSystem = decryptedText.startsWith('🚨');
-                         const snippet = isSystem ? 'System Action Alerts' : isImage ? '📷 Photo' : isAudio ? '🎤 Voice message' : decryptedText;
-                         
-                         setContacts(prev => prev.map(c => 
-                             c.id === activeChat.id ? { ...c, lastMessage: snippet, time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) } : c
-                         ));
+                        const isMe = msg.senderId === user.id;
+                        playPopSound(isMe ? 'send' : 'receive');
+
+                        // Update contact snippet properly with decrypted text
+                        const isImage = decryptedText.startsWith('[IMAGE]');
+                        const isAudio = decryptedText.startsWith('[AUDIO]');
+                        const isSystem = decryptedText.startsWith('🚨');
+                        const snippet = isSystem ? 'System Action Alerts' : isImage ? '📷 Photo' : isAudio ? '🎤 Voice message' : decryptedText;
+
+                        setContacts(prev => prev.map(c =>
+                            c.id === activeChat.id ? { ...c, lastMessage: snippet, time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) } : c
+                        ));
                     }
-                    
+
                     const finalSorted = Array.from(existingMap.values());
-                    
+
                     import('idb-keyval').then(({ set }) => {
                         set(`chat_cache_${activeChat.id}`, finalSorted).catch(console.warn);
                     });
-                    
+
                     return { ...prev, [activeChat.id]: finalSorted };
                 });
             }
@@ -357,15 +343,6 @@ export function ChatWindow() {
                             <p className="opacity-70 font-medium">'Gaze-Lock' system is protecting your conversation.</p>
                         </motion.div>
                     </motion.div>
-                )}
-            </AnimatePresence>
-
-            <AnimatePresence>
-                {showTour && (
-                    <SmartTour
-                        isDark={isDark}
-                        onComplete={completeTour}
-                    />
                 )}
             </AnimatePresence>
 
@@ -836,7 +813,7 @@ function useChatWindowActions() {
     const setShowDetails = useChatStore(s => s.setShowDetails);
     const mutedChatIds = useChatStore(s => s.mutedChatIds);
     const setMutedChatIds = useChatStore(s => s.setMutedChatIds);
-    
+
     const { currentMessages, loadMoreMessages, isLoadingOlder, isLoadingMessages, hasMoreMessages } = useChat();
     const { user } = useAuthContext();
     const [isEditingNickname, setIsEditingNickname] = useState(false);
@@ -904,10 +881,16 @@ function useChatWindowActions() {
             try {
                 const { supabase } = await import('@/lib/supabaseClient');
                 const { fetchAndCacheVerification } = await import('@/components/ui/core/VerifiedBadge');
-                await Promise.all([
-                    supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', activeChat.id),
-                    supabase.from('follows').delete().eq('follower_id', activeChat.id).eq('following_id', user.id)
-                ]);
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
+
+                await fetch(`/api/follow/${activeChat.id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
             } catch (err) {
                 console.error("Error removing follows during block", err);
             }
@@ -947,10 +930,19 @@ function useChatWindowActions() {
             // Immediately mark it active in UI
             const updatedMetadata = { ...(activeChat.lastMessageMetadata || {}), message_status: 'active' };
             setContacts(prev => prev.map(c => c.id === activeChat.id ? { ...c, lastMessageMetadata: updatedMetadata } : c));
-            
+
             // Follow the user to make future messages active automatically
             const { supabase } = await import('@/lib/supabaseClient');
-            await supabase.from('follows').upsert({ follower_id: user.id, following_id: activeChat.id }, { onConflict: 'follower_id, following_id' });
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            await fetch(`/api/follow/${activeChat.id}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
         } catch (err) {
             console.error(err);
         }
@@ -961,11 +953,20 @@ function useChatWindowActions() {
         // Decline = Delete + Block
         try {
             const { supabase } = await import('@/lib/supabaseClient');
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             // Delete messages
-            await supabase.from('messages').delete().eq('conversation_id', activeChat.conversationId);
+            await fetch(`/api/messages/conversation/${activeChat.conversationId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
             // Block
             setBlockedIds(prev => [...new Set([...prev, activeChat.id])]);
-            
+
             // Clean up UI
             setAllMessages(prev => {
                 const updated = { ...prev };
@@ -1006,3 +1007,5 @@ function useChatWindowActions() {
         hasMoreMessages
     };
 }
+
+

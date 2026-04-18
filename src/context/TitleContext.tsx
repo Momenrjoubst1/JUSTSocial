@@ -8,7 +8,7 @@ interface TitleContextType {
 const TitleContext = createContext<TitleContextType | undefined>(undefined);
 
 export function TitleProvider({ children }: { children: ReactNode }) {
-  const [baseTitle, setBaseTitle] = useState('SkillSwap');
+  const [baseTitle, setBaseTitle] = useState('JUST Social');
 
   return (
     <TitleContext.Provider value={{ baseTitle, setBaseTitle }}>

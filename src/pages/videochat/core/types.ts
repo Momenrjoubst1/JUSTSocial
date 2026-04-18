@@ -71,4 +71,8 @@ export const CONFIG = {
   LEAVE_API_URL: buildApiUrl(rawTokenApiUrl, "leave"),
   MODERATION_API_URL: buildApiUrl(rawTokenApiUrl, "moderation"),
   RETRY_DELAY: 2000,
+  CONNECTION_TIMEOUT_MS: 15000,
+  PEER_SEARCH_TIMEOUT_MS: 15000,
+  PEER_POLL_INTERVAL_MS: 2000,
+  RECONNECT_DELAYS_MS: [1000, 2000, 4000],
 };

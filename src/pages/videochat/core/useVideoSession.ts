@@ -63,6 +63,7 @@ export interface UseVideoSessionOptions {
   onDataReceived?: (parsed: unknown, participant: VideoSessionParticipant) => void;
   requestMatch: () => Promise<VideoSessionMatch | null>;
   readyToConnect?: boolean;
+  aiActive?: boolean; // Controls whether to mute local audio to the remote human peer
 }
 
 /* ─── Hook Return ───────────────────────────────────────────────────────── */
@@ -71,6 +72,7 @@ export interface UseVideoSessionReturn {
   statusMessage: string;
   connected: boolean;
   cameraMuted: boolean;
+  audioMuted: boolean;
   remoteCameraMuted: boolean;
   isSearching: boolean;
   connectionQuality: 'poor' | 'good';
@@ -82,6 +84,7 @@ export interface UseVideoSessionReturn {
   sendData: (data: object) => void;
   handleSkip: () => void;
   handleToggleCamera: () => void;
+  handleToggleAudio: () => void;
   handleToggleSearch: () => void;
   handleExit: () => void;
   retryCamera: () => Promise<void>;
@@ -94,6 +97,7 @@ export function useVideoSession({
   onDataReceived,
   requestMatch,
   readyToConnect = true,
+  aiActive = false,
 }: UseVideoSessionOptions): UseVideoSessionReturn {
 
   const { t } = useLanguage();
@@ -109,10 +113,19 @@ export function useVideoSession({
   }, []);
   const cameraMutedRef = useRef(cameraMuted);
   cameraMutedRef.current = cameraMuted;
+
+  const [audioMuted, setAudioMutedRaw] = useState(() => localStorage.getItem('vc_mic_off') === '1');
+  const setAudioMuted = useCallback((v: boolean) => {
+    setAudioMutedRaw(v);
+    localStorage.setItem('vc_mic_off', v ? '1' : '0');
+  }, []);
+
   const [remoteCameraMuted, setRemoteCameraMuted] = useState(false);
   const [isSearching, setIsSearching] = useState(true);
   const [connectionQuality, setConnectionQuality] = useState<'poor' | 'good'>('good');
   const [remotePeerIdentity, setRemotePeerIdentity] = useState<string | null>(null);
+  
+  const currentVolumeRef = useRef<number>(0.5); // Default 50%
 
   /* ── Refs ───────────────────────────────────────────────────────────── */
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -129,6 +142,7 @@ export function useVideoSession({
   const mountedRef = useRef(true);
   const effectIdRef = useRef(0);       // ← StrictMode guard
   const audioEls = useRef<HTMLElement[]>([]);
+  const joinRoomRef = useRef<(() => Promise<void>) | null>(null);
 
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const peerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -139,6 +153,37 @@ export function useVideoSession({
   useEffect(() => { onDataRef.current = onDataReceived; }, [onDataReceived]);
 
   /* ── Tiny helpers ───────────────────────────────────────────────────── */
+  const syncTrackPermissions = useCallback(() => {
+    const room = roomRef.current;
+    const peer = remotePeerRef.current;
+    if (!room || !room.localParticipant) return;
+
+    if (aiActive && peer) {
+      // Allow the human peer to see video, but not hear audio
+      const allowedSids: string[] = [];
+      room.localParticipant.videoTrackPublications.forEach((pub) => {
+        if (pub.trackSid) allowedSids.push(pub.trackSid);
+      });
+      room.localParticipant.setTrackSubscriptionPermissions(true, [
+        {
+          participantIdentity: peer.identity,
+          allowAll: false,
+          allowedTrackSids: allowedSids,
+        },
+      ]);
+      console.warn(`🔇 [VideoChat] Muted audio to peer (${peer.identity}) because AI is active.`);
+    } else {
+      // Revert to everyone is allowed
+      room.localParticipant.setTrackSubscriptionPermissions(true, []);
+      console.warn("🔊 [VideoChat] Restored default audio to peer (AI inactive).");
+    }
+  }, [aiActive, remotePeerIdentity]);
+
+  // Ensure it reacts immediately to aiActive state changes
+  useEffect(() => {
+    syncTrackPermissions();
+  }, [syncTrackPermissions]);
+
   const clearTimers = useCallback(() => {
     if (retryTimer.current) { clearTimeout(retryTimer.current); retryTimer.current = null; }
     if (peerTimer.current) { clearTimeout(peerTimer.current); peerTimer.current = null; }
@@ -146,9 +191,26 @@ export function useVideoSession({
   }, []);
 
   const cleanupAudio = useCallback(() => {
-    audioEls.current.forEach((el) => { try { el.remove(); } catch (_) { } });
+    audioEls.current.forEach((el) => {
+      try {
+        (el as HTMLAudioElement).srcObject = null;
+        el.remove();
+      } catch (error) { console.error("Audio cleanup failed:", error); }
+    });
     audioEls.current = [];
   }, []);
+
+  const handleMediaError = useCallback((error: any, isAudioOnlyFallback: boolean = false) => {
+    if (error?.name === 'NotAllowedError') {
+      setStatus("error-camera");
+      const errorMsg = isAudioOnlyFallback
+        ? " - Microphone access is required to start a video call. Please allow access in your browser settings and try again."
+        : " - Permission Denied";
+      setStatusMessage(String(t("videochat.status.error")) + errorMsg);
+    } else {
+      console.warn("Cleaned up error:", error);
+    }
+  }, [t]);
 
   /** Notify server we left (works even during page unload) */
   const notifyLeave = useCallback((room: string | null) => {
@@ -163,15 +225,15 @@ export function useVideoSession({
         headers,
         body,
         keepalive: true,
-      }).catch(() => { });
+      }).catch((error) => { console.error("Notify leave failed:", error); });
     });
   }, []);
 
   /** Safely tear down a Room: remove listeners → disconnect (keep tracks alive) */
-  const teardownRoom = useCallback((room: Room | null, roomName: string | null) => {
-    if (!room) return;
-    try { room.removeAllListeners(); } catch (_) { }
-    try { room.disconnect(false); } catch (_) { }   // false = DON'T kill local MediaStreamTracks
+  const teardownRoom = useCallback(async (room: Room | null, roomName: string | null) => {
+    if (!room || room.state === "disconnected") return;
+    try { room.removeAllListeners(); } catch (error) { console.error("WebRTC removeAllListeners failed:", error); }
+    try { await room.disconnect(false); } catch (error) { console.error("WebRTC disconnect failed:", error); }   // false = DON'T kill local MediaStreamTracks
     notifyLeave(roomName);
   }, [notifyLeave]);
 
@@ -193,8 +255,6 @@ export function useVideoSession({
     };
   }, []);
 
-  const RECONNECT_DELAYS = [1000, 2000, 4000];
-
   const attemptReconnection = useCallback(async (): Promise<boolean> => {
     const room = roomRef.current;
     if (!room) return false;
@@ -211,7 +271,7 @@ export function useVideoSession({
     }
 
     const attemptNumber = state.attempt + 1;
-    const delay = RECONNECT_DELAYS[state.attempt] ?? 4000;
+    const delay = CONFIG.RECONNECT_DELAYS_MS[state.attempt] ?? 4000;
 
     console.log(`🔄 Reconnection attempt ${attemptNumber}/${state.maxAttempts} in ${delay}ms...`);
 
@@ -256,6 +316,9 @@ export function useVideoSession({
         track.attach(remoteVideoRef.current);
       } else if (track.kind === Track.Kind.Audio) {
         const el = track.attach();
+        if ("volume" in el) {
+          (el as HTMLMediaElement).volume = currentVolumeRef.current;
+        }
         document.body.appendChild(el);
         audioEls.current.push(el);
       }
@@ -286,11 +349,8 @@ export function useVideoSession({
         if (localVideoRef.current) localVideoRef.current.srcObject = newStream;
         setCameraMuted(false);
         return newStream;
-      } catch (err: any) { 
-        if (err.name === 'NotAllowedError') {
-           setStatus("error-camera");
-           setStatusMessage(String(t("videochat.status.error") + " - Permission Denied"));
-        }
+      } catch (err: any) {
+        handleMediaError(err);
       }
     }
     try {
@@ -299,16 +359,150 @@ export function useVideoSession({
       if (localVideoRef.current) localVideoRef.current.srcObject = newStream;
       setCameraMuted(true);
       return newStream;
-    } catch (_) { }
+    } catch (e: any) {
+      handleMediaError(e, true);
+    }
     setCameraMuted(true);
     return null;
-  }, [setCameraMuted, t]);
+  }, [setCameraMuted, handleMediaError]);
 
-  /* ══════════════════════════════════════════════════════════════════════
+  /* ── Setup Room Events Helper ───────────────────────────────────────── */
+  const setupRoomEvents = useCallback((room: Room, handlePeerFound: (p: RemoteParticipant) => void) => {
+    room.on(RoomEvent.TrackSubscribed, onTrackSubscribed);
+
+    room.on(RoomEvent.ParticipantConnected, (p: RemoteParticipant) => {
+      console.warn("🟢 [VideoChat] ParticipantConnected:", p.identity);
+      if (p.identity.toLowerCase().includes('agent')) return;
+      handlePeerFound(p);
+    });
+
+    room.on(RoomEvent.ParticipantDisconnected, (p: RemoteParticipant) => {
+      console.warn("🟡 [VideoChat] ParticipantDisconnected:", p?.identity);
+      if (p.identity.toLowerCase().includes('agent')) return;
+      
+      if (!mountedRef.current || isSkippingRef.current || roomRef.current !== room) return;
+      
+      // Only reset the call if the actual human partner disconnected
+      if (remotePeerRef.current && p.identity !== remotePeerRef.current.identity) return;
+
+      resetPeerState();
+      cleanupAudio();
+      setStatus("looking");
+      setStatusMessage(String(t("videochat.status.peer_left")));
+      retryTimer.current = setTimeout(() => {
+        isJoiningRef.current = false;   // allow re-entry
+        joinRoomRef.current?.();
+      }, CONFIG.RETRY_DELAY);
+    });
+
+    room.on(RoomEvent.TrackUnsubscribed, (track: Track) => {
+      track.detach().forEach((el) => {
+        (el as HTMLMediaElement).srcObject = null;
+        el.remove();
+      });
+      audioEls.current = audioEls.current.filter((storedEl) => document.body.contains(storedEl));
+    });
+
+    room.on(RoomEvent.TrackMuted, (pub: TrackPublication, _p: Participant) => {
+      if (pub.kind === Track.Kind.Video) {
+        console.warn("🔇 [VideoChat] Remote camera MUTED");
+        setRemoteCameraMuted(true);
+      }
+    });
+    room.on(RoomEvent.TrackUnmuted, (pub: TrackPublication, _p: Participant) => {
+      if (pub.kind === Track.Kind.Video) {
+        console.warn("🔊 [VideoChat] Remote camera UNMUTED");
+        setRemoteCameraMuted(false);
+      }
+    });
+
+    room.on(RoomEvent.TrackPublished, (pub: TrackPublication, _p: RemoteParticipant) => {
+      if (pub.kind === Track.Kind.Video) {
+        console.warn("📹 [VideoChat] Remote video track PUBLISHED");
+        setRemoteCameraMuted(false);
+      }
+    });
+    room.on(RoomEvent.TrackUnpublished, (pub: TrackPublication, _p: RemoteParticipant) => {
+      if (pub.kind === Track.Kind.Video) {
+        console.warn("📹 [VideoChat] Remote video track UNPUBLISHED");
+        setRemoteCameraMuted(true);
+      }
+    });
+
+    room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant?: RemoteParticipant) => {
+      try {
+        const parsed = JSON.parse(new TextDecoder().decode(payload));
+        if (onDataRef.current && participant) {
+          onDataRef.current(parsed, { identity: participant.identity });
+        }
+      } catch (e) { console.warn("Cleaned up error:", e); }
+    });
+
+    room.on(RoomEvent.ConnectionStateChanged, (s: ConnectionState) => {
+      console.warn("🔵 [VideoChat] State →", s, "| room:", currentRoomName.current);
+    });
+
+    room.on(RoomEvent.Disconnected, async (reason?: DisconnectReason) => {
+      if (!mountedRef.current || isSkippingRef.current || roomRef.current !== room) return;
+      console.log('🔌 Disconnected — reason:', reason);
+
+      const intentionalReasons = [
+        DisconnectReason.CLIENT_INITIATED,
+        DisconnectReason.ROOM_DELETED,
+        DisconnectReason.PARTICIPANT_REMOVED,
+      ];
+
+      if (reason && intentionalReasons.includes(reason)) {
+        console.log('👋 Intentional disconnect — not reconnecting');
+        roomRef.current = null;
+        currentRoomName.current = null;
+        resetPeerState();
+        cleanupAudio();
+        setStatus("looking");
+        setStatusMessage(String(t("videochat.status.disconnected")));
+        retryTimer.current = setTimeout(() => {
+          isJoiningRef.current = false;
+          joinRoomRef.current?.();
+        }, CONFIG.RETRY_DELAY);
+        return;
+      }
+
+      console.log('📶 Unintentional disconnect — attempting reconnection...');
+      const reconnected = await attemptReconnection();
+
+      if (!reconnected) {
+        console.warn('❌ Reconnection failed — finding new partner');
+        roomRef.current = null;
+        currentRoomName.current = null;
+        resetPeerState();
+        cleanupAudio();
+        setStatus("looking");
+        setStatusMessage(String(t("videochat.status.disconnected")));
+        retryTimer.current = setTimeout(() => {
+          isJoiningRef.current = false;
+          joinRoomRef.current?.();
+        }, CONFIG.RETRY_DELAY);
+      }
+    });
+
+    room.on(RoomEvent.ConnectionQualityChanged, (quality: ConnectionQuality, participant: Participant) => {
+      if (participant === room.localParticipant) {
+        if (quality === ConnectionQuality.Poor) {
+          console.warn('⚠️ Poor connection quality detected');
+          setConnectionQuality('poor');
+        } else if (quality === ConnectionQuality.Good || quality === ConnectionQuality.Excellent) {
+          setConnectionQuality('good');
+        }
+      }
+    });
+  }, [onTrackSubscribed, cleanupAudio, resetPeerState, attemptReconnection, t]);
+
+  /* ════════════════════════════════════════════════════════════════════════════════
    * joinRoom — the main connection flow
    * Re-entry safe: if already joining, subsequent calls are ignored.
-   * ════════════════════════════════════════════════════════════════════ */
+   * ════════════════════════════════════════════════════════════════════════════════ */
   const joinRoom = useCallback(async () => {
+    joinRoomRef.current = joinRoom;
     // ── Guards ────────────────────────────────────────────────────────
     if (!mountedRef.current || !isSearchingRef.current || !readyToConnect) return;
     if (isJoiningRef.current) {
@@ -320,7 +514,7 @@ export function useVideoSession({
     // ── Clean up previous room ───────────────────────────────────────
     clearTimers();
     if (roomRef.current) {
-      teardownRoom(roomRef.current, currentRoomName.current);
+      await teardownRoom(roomRef.current, currentRoomName.current);
       roomRef.current = null;
       currentRoomName.current = null;
     }
@@ -333,7 +527,15 @@ export function useVideoSession({
 
       // ── Request next room assignment from matchmaking ─────────────
       console.warn("🟢 [VideoSession] Requesting next match…");
-      const assignment = await requestMatch();
+      let assignment = null;
+      try {
+        assignment = await requestMatch();
+      } catch (reqError: any) {
+        console.error("🔴 [VideoSession] requestMatch threw:", reqError);
+        // Throw it further so the main catch block handles 429 appropriately
+        throw reqError;
+      }
+      
       if (!assignment) {
         throw new Error("Matchmaking did not return a room assignment");
       }
@@ -377,124 +579,7 @@ export function useVideoSession({
       };
 
       // ── Event listeners ────────────────────────────────────────────
-      room.on(RoomEvent.TrackSubscribed, onTrackSubscribed);
-
-      room.on(RoomEvent.ParticipantConnected, (p: RemoteParticipant) => {
-        console.warn("🟢 [VideoChat] ParticipantConnected:", p.identity);
-        handlePeerFound(p);
-      });
-
-      room.on(RoomEvent.ParticipantDisconnected, (p: RemoteParticipant) => {
-        console.warn("🟡 [VideoChat] ParticipantDisconnected:", p?.identity);
-        if (!mountedRef.current || isSkippingRef.current || roomRef.current !== room) return;
-        resetPeerState();
-        cleanupAudio();
-        setStatus("looking");
-        setStatusMessage(String(t("videochat.status.peer_left")));
-        retryTimer.current = setTimeout(() => {
-          isJoiningRef.current = false;   // allow re-entry
-          joinRoom();
-        }, CONFIG.RETRY_DELAY);
-      });
-
-      room.on(RoomEvent.TrackUnsubscribed, (track: Track) => {
-        track.detach().forEach((el) => el.remove());
-      });
-
-      // ── Remote camera mute/unmute detection ────────────────────────
-      room.on(RoomEvent.TrackMuted, (pub: TrackPublication, _p: Participant) => {
-        if (pub.kind === Track.Kind.Video) {
-          console.warn("🔇 [VideoChat] Remote camera MUTED");
-          setRemoteCameraMuted(true);
-        }
-      });
-      room.on(RoomEvent.TrackUnmuted, (pub: TrackPublication, _p: Participant) => {
-        if (pub.kind === Track.Kind.Video) {
-          console.warn("🔊 [VideoChat] Remote camera UNMUTED");
-          setRemoteCameraMuted(false);
-        }
-      });
-
-      // ── Remote track published/unpublished (camera toggled on/off) ──
-      room.on(RoomEvent.TrackPublished, (pub: TrackPublication, _p: RemoteParticipant) => {
-        if (pub.kind === Track.Kind.Video) {
-          console.warn("📹 [VideoChat] Remote video track PUBLISHED");
-          setRemoteCameraMuted(false);
-        }
-      });
-      room.on(RoomEvent.TrackUnpublished, (pub: TrackPublication, _p: RemoteParticipant) => {
-        if (pub.kind === Track.Kind.Video) {
-          console.warn("📹 [VideoChat] Remote video track UNPUBLISHED");
-          setRemoteCameraMuted(true);
-        }
-      });
-
-      room.on(RoomEvent.DataReceived, (payload: Uint8Array, participant?: RemoteParticipant) => {
-        try {
-          const parsed = JSON.parse(new TextDecoder().decode(payload));
-          if (onDataRef.current && participant) {
-            onDataRef.current(parsed, { identity: participant.identity });
-          }
-        } catch (_) { }
-      });
-
-      room.on(RoomEvent.ConnectionStateChanged, (s: ConnectionState) => {
-        console.warn("🔵 [VideoChat] State →", s, "| room:", roomName);
-      });
-
-      room.on(RoomEvent.Disconnected, async (reason?: DisconnectReason) => {
-        if (!mountedRef.current || isSkippingRef.current || roomRef.current !== room) return;
-        console.log('🔌 Disconnected — reason:', reason);
-
-        const intentionalReasons = [
-          DisconnectReason.CLIENT_INITIATED,
-          DisconnectReason.ROOM_DELETED,
-          DisconnectReason.PARTICIPANT_REMOVED,
-        ];
-
-        if (reason && intentionalReasons.includes(reason)) {
-          console.log('👋 Intentional disconnect — not reconnecting');
-          roomRef.current = null;
-          currentRoomName.current = null;
-          resetPeerState();
-          cleanupAudio();
-          setStatus("looking");
-          setStatusMessage(String(t("videochat.status.disconnected")));
-          retryTimer.current = setTimeout(() => {
-            isJoiningRef.current = false;
-            joinRoom();
-          }, CONFIG.RETRY_DELAY);
-          return;
-        }
-
-        console.log('📶 Unintentional disconnect — attempting reconnection...');
-        const reconnected = await attemptReconnection();
-
-        if (!reconnected) {
-          console.warn('❌ Reconnection failed — finding new partner');
-          roomRef.current = null;
-          currentRoomName.current = null;
-          resetPeerState();
-          cleanupAudio();
-          setStatus("looking");
-          setStatusMessage(String(t("videochat.status.disconnected")));
-          retryTimer.current = setTimeout(() => {
-            isJoiningRef.current = false;
-            joinRoom();
-          }, CONFIG.RETRY_DELAY);
-        }
-      });
-
-      room.on(RoomEvent.ConnectionQualityChanged, (quality: ConnectionQuality, participant: Participant) => {
-        if (participant === room.localParticipant) {
-          if (quality === ConnectionQuality.Poor) {
-            console.warn('⚠️ Poor connection quality detected');
-            setConnectionQuality('poor');
-          } else if (quality === ConnectionQuality.Good || quality === ConnectionQuality.Excellent) {
-            setConnectionQuality('good');
-          }
-        }
-      });
+      setupRoomEvents(room, handlePeerFound);
 
       // ── Connect ────────────────────────────────────────────────────
       setStatus("connecting");
@@ -505,7 +590,7 @@ export function useVideoSession({
       await Promise.race([
         room.connect(url, token, { rtcConfig: { iceServers } }),
         new Promise<never>((_, rej) =>
-          setTimeout(() => rej(new Error("Connection timeout (15s)")), 15_000),
+          setTimeout(() => rej(new Error(`Connection timeout (${CONFIG.CONNECTION_TIMEOUT_MS}ms)`)), CONFIG.CONNECTION_TIMEOUT_MS),
         ),
       ]);
 
@@ -521,17 +606,26 @@ export function useVideoSession({
 
       // ── Ensure local media is alive, then publish ──────────────────
       const stream = await ensureLocalStream();
-      if (stream && roomRef.current === room) {
+      if (stream && roomRef.current === room && room.state !== ConnectionState.Disconnected) {
         const vt = stream.getVideoTracks()[0];
         const at = stream.getAudioTracks()[0];
-        if (vt) await room.localParticipant.publishTrack(vt, { name: "camera", simulcast: true });
-        if (at) await room.localParticipant.publishTrack(at, { name: "microphone" });
+        try {
+          if (vt) await room.localParticipant.publishTrack(vt, { name: "camera", simulcast: true });
+        } catch (err) {
+          console.error("Failed to publish video track:", err);
+        }
+        try {
+          if (at) await room.localParticipant.publishTrack(at, { name: "microphone" });
+        } catch (err) {
+          console.error("Failed to publish audio track:", err);
+        }
         console.warn("🟢 [VideoChat] Published tracks (v:", !!vt, "a:", !!at, ")");
       }
 
       // ── Check for existing peers ───────────────────────────────────
       for (const [, p] of room.remoteParticipants) {
         if (remotePeerRef.current) break;
+        if (p.identity.toLowerCase().includes('agent')) continue;
         handlePeerFound(p);
       }
 
@@ -546,46 +640,64 @@ export function useVideoSession({
             return;
           }
           for (const [, p] of room.remoteParticipants) {
+            if (p.identity.toLowerCase().includes('agent')) continue;
             if (!remotePeerRef.current) handlePeerFound(p);
           }
-        }, 2_000);
+        }, CONFIG.PEER_POLL_INTERVAL_MS);
 
-        peerTimer.current = setTimeout(() => {
+        peerTimer.current = setTimeout(async () => {
           if (pollTimer.current) clearInterval(pollTimer.current);
           if (!mountedRef.current || !isSearchingRef.current) return;
           if (roomRef.current === room && !remotePeerRef.current) {
-            console.warn("🟡 [VideoChat] No peer after 15s — retry…");
-            teardownRoom(room, roomName);
+            console.warn(`🟡 [VideoChat] No peer after ${CONFIG.PEER_SEARCH_TIMEOUT_MS}ms — retry…`);
+            await teardownRoom(room, roomName);
             roomRef.current = null;
             currentRoomName.current = null;
             isJoiningRef.current = false;
-            joinRoom();
+            joinRoomRef.current?.();
           }
-        }, 15_000);
+        }, CONFIG.PEER_SEARCH_TIMEOUT_MS);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("🔴 [VideoChat] joinRoom error:", err);
       if (!mountedRef.current) return;
       setStatus("error-peer");
-      setStatusMessage(String(t("videochat.status.error")));
-      retryTimer.current = setTimeout(() => {
+
+      let delay = CONFIG.RETRY_DELAY;
+      if (err?.message?.includes("429") || err?.message?.toLowerCase().includes("limit reached") || err?.status === 429) {
+          console.warn("⚠️ Rate limited. Stopping search to prevent infinite loop.");
+          setStatusMessage("Rate limit reached. Please wait 15 minutes.");
+          
+          // CRITICAL FIX: Stop searching so it doesn't loop forever!
+          isSearchingRef.current = false;
+          setIsSearching(false);
+          delay = 0; // We won't retry
+      } else {
+          setStatusMessage(String(t("videochat.status.error")));
+      }
+
+      if (isSearchingRef.current && delay > 0) {
+        retryTimer.current = setTimeout(() => {
+          isJoiningRef.current = false;
+          joinRoomRef.current?.();
+        }, delay);
+      } else {
         isJoiningRef.current = false;
-        joinRoom();
-      }, CONFIG.RETRY_DELAY);
+      }
     } finally {
       // Release the joining lock UNLESS a retry timer was set (it will release)
       if (!retryTimer.current && !peerTimer.current) {
         isJoiningRef.current = false;
       }
     }
-  }, [onTrackSubscribed, cleanupAudio, clearTimers, teardownRoom, resetPeerState, notifyLeave, ensureLocalStream, readyToConnect, requestMatch]);
+  }, [onTrackSubscribed, cleanupAudio, clearTimers, teardownRoom, resetPeerState, notifyLeave, ensureLocalStream, readyToConnect, requestMatch, t, handleConnectionSuccess, setupRoomEvents]);
 
   /* ── Acquire initial media ──────────────────────────────────────────── */
   const acquireMedia = useCallback(async (): Promise<MediaStream | null> => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-       setStatus("error-camera");
-       setStatusMessage(String(t("videochat.status.error") + " - Camera Not Supported"));
-       return null;
+      setStatus("error-camera");
+      setStatusMessage(String(t("videochat.status.error") + " - Camera Not Supported"));
+      return null;
     }
 
     const wantCameraOff = localStorage.getItem('vc_camera_off') === '1';
@@ -595,11 +707,8 @@ export function useVideoSession({
         const s = await navigator.mediaDevices.getUserMedia({ audio: true });
         setCameraMuted(true);
         return s;
-      } catch (err: any) { 
-        if (err.name === 'NotAllowedError') {
-          setStatus("error-camera");
-          setStatusMessage(String(t("videochat.status.error") + " - Permission Denied"));
-        }
+      } catch (err: any) {
+        handleMediaError(err, true);
       }
       setCameraMuted(true);
       return null;
@@ -612,9 +721,8 @@ export function useVideoSession({
       setCameraMuted(false);
       return s;
     } catch (err: any) {
-      if (err.name === 'NotAllowedError') {
-        setStatus("error-camera");
-        setStatusMessage(String(t("videochat.status.error") + " - Permission Denied"));
+      if (err?.name === 'NotAllowedError') {
+        handleMediaError(err);
         setCameraMuted(true);
         return null;
       }
@@ -623,10 +731,12 @@ export function useVideoSession({
       const s = await navigator.mediaDevices.getUserMedia({ audio: true });
       setCameraMuted(true);
       return s;
-    } catch (_) { }
+    } catch (e: any) {
+      handleMediaError(e, true);
+    }
     setCameraMuted(true);
     return null;
-  }, [setCameraMuted, t]);
+  }, [setCameraMuted, handleMediaError, t]);
 
   /* ── Retry camera (UI button) ───────────────────────────────────────── */
   const retryCamera = useCallback(async () => {
@@ -642,12 +752,13 @@ export function useVideoSession({
       setCameraMuted(false);
       if (roomRef.current) {
         const vt = stream.getVideoTracks()[0];
-        if (vt) await roomRef.current.localParticipant.publishTrack(vt, { name: "camera" });
+        if (vt) await roomRef.current.localParticipant.publishTrack(vt, { name: "camera", simulcast: true });
       }
     } catch (err: any) {
       console.warn("Retry camera failed:", err.message);
+      handleMediaError(err);
     }
-  }, []);
+  }, [handleMediaError]);
 
   /* ══════════════════════════════════════════════════════════════════════
    * Init Effect — StrictMode safe via effectIdRef
@@ -685,11 +796,22 @@ export function useVideoSession({
       isSearchingRef.current = false;
       isJoiningRef.current = false;
       clearTimers();
+      // Stop ALL local media tracks before tearing down the room
+      localStreamRef.current?.getTracks().forEach((t) => { t.stop(); t.enabled = false; });
+      // Also stop any tracks still held by the room's local participant
+      try {
+        roomRef.current?.localParticipant.videoTrackPublications.forEach((pub) => {
+          pub.track?.stop();
+        });
+        roomRef.current?.localParticipant.audioTrackPublications.forEach((pub) => {
+          pub.track?.stop();
+        });
+      } catch (e) {
+        console.warn("Cleanup: room participant tracks already disposed:", e);
+      }
       teardownRoom(roomRef.current, currentRoomName.current);
       roomRef.current = null;
       currentRoomName.current = null;
-      // Stop local camera/mic tracks so the camera LED turns off when leaving
-      localStreamRef.current?.getTracks().forEach((t) => { t.stop(); t.enabled = false; });
       localStreamRef.current = null;
       if (localVideoRef.current) localVideoRef.current.srcObject = null;
       cleanupAudio();
@@ -698,22 +820,22 @@ export function useVideoSession({
   }, [readyToConnect, joinRoom]);
 
   /* ── Skip ───────────────────────────────────────────────────────────── */
-  const handleSkip = useCallback(() => {
+  const handleSkip = useCallback(async () => {
+    if (isSkippingRef.current) return; // Prevent multiple rapid clicks (Idempotency)
     isSkippingRef.current = true;
     clearTimers();
-    teardownRoom(roomRef.current, currentRoomName.current);
+    await teardownRoom(roomRef.current, currentRoomName.current);
     roomRef.current = null;
     currentRoomName.current = null;
     resetPeerState();
     cleanupAudio();
     setStatus("connecting");
     setStatusMessage(String(t("videochat.status.finding_new")));
-    setTimeout(() => {
-      isSkippingRef.current = false;
-      isJoiningRef.current = false;
-      if (mountedRef.current && isSearchingRef.current) joinRoom();
-    }, 400);
-  }, [clearTimers, teardownRoom, resetPeerState, joinRoom, cleanupAudio]);
+
+    isSkippingRef.current = false;
+    isJoiningRef.current = false;
+    if (mountedRef.current && isSearchingRef.current) joinRoomRef.current?.();
+  }, [clearTimers, teardownRoom, resetPeerState, cleanupAudio, t]);
 
   /* ── Toggle Camera ──────────────────────────────────────────────────── */
   const handleToggleCamera = useCallback(async () => {
@@ -722,28 +844,21 @@ export function useVideoSession({
     if (mute) {
       // ── TURN OFF: fully stop video tracks so camera LED goes off ──
       const vt = localStreamRef.current?.getVideoTracks() ?? [];
-      vt.forEach((t) => { t.stop(); });
+      vt.forEach((t) => {
+        t.stop();
+        localStreamRef.current?.removeTrack(t);
+      });
 
-      // Remove video tracks from the stream (keep audio)
-      if (localStreamRef.current) {
-        vt.forEach((t) => localStreamRef.current!.removeTrack(t));
-      }
-
-      // Clear local video preview
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = localStreamRef.current || null;
       }
 
       // Unpublish video track from LiveKit room
       const room = roomRef.current;
-      if (room && room.state === ConnectionState.Connected) {
-        try {
-          for (const pub of room.localParticipant.videoTrackPublications.values()) {
-            if (pub.track) {
-              await room.localParticipant.unpublishTrack(pub.track);
-            }
-          }
-        } catch (_) { }
+      if (room?.state === ConnectionState.Connected) {
+        for (const pub of room.localParticipant.videoTrackPublications.values()) {
+          if (pub.track) await room.localParticipant.unpublishTrack(pub.track).catch(e => console.warn(e));
+        }
       }
 
       setCameraMuted(true);
@@ -753,29 +868,16 @@ export function useVideoSession({
       try {
         const videoStream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false,
         });
         const newVideoTrack = videoStream.getVideoTracks()[0];
 
+        if (!newVideoTrack) return;
+        if (!mountedRef.current) { newVideoTrack.stop(); return; }
 
-        if (newVideoTrack && localStreamRef.current) {
-
-
+        if (localStreamRef.current) {
           localStreamRef.current.addTrack(newVideoTrack);
-
-
-        } else if (newVideoTrack) {
-
-
-          if (!mountedRef.current) {
-            videoStream.getTracks().forEach((t) => t.stop());
-            return;
-          }
-
-          // If stream was lost, recreate with existing audio
-          const audioTracks = localStreamRef.current?.getAudioTracks() ?? [];
-          const newStream = new MediaStream([...audioTracks, newVideoTrack]);
-          localStreamRef.current = newStream;
+        } else {
+          localStreamRef.current = new MediaStream([newVideoTrack]);
         }
 
         if (localVideoRef.current) {
@@ -784,29 +886,54 @@ export function useVideoSession({
 
         // Publish new video track directly to LiveKit room
         const room = roomRef.current;
-        if (room && room.state === ConnectionState.Connected && newVideoTrack) {
-          try {
-            await room.localParticipant.publishTrack(newVideoTrack, { name: "camera", simulcast: false });
-          } catch (pubErr) {
-            console.error("[VideoChat] Failed to publish camera track:", pubErr);
-          }
+        if (room?.state === ConnectionState.Connected) {
+          await room.localParticipant.publishTrack(newVideoTrack, { name: "camera", simulcast: true }).catch(e => console.error(e));
         }
 
         setCameraMuted(false);
         console.warn("📷 [VideoChat] Camera ON (new track acquired & published)");
-      } catch (err) {
+      } catch (err: any) {
         console.error("[VideoChat] Failed to re-acquire camera:", err);
+        handleMediaError(err);
       }
     }
-  }, [cameraMuted]);
+  }, [cameraMuted, handleMediaError]);
+
+  /* ── Toggle Audio ──────────────────────────────────────────────────── */
+  const handleToggleAudio = useCallback(async () => {
+    const mute = !audioMuted;
+
+    // Toggle audio track state locally
+    const audioTracks = localStreamRef.current?.getAudioTracks() ?? [];
+    audioTracks.forEach((t) => { t.enabled = !mute; });
+
+    setAudioMuted(mute);
+    console.warn(`🎤 [VideoChat] Microphone ${mute ? 'MUTED' : 'UNMUTED'}`);
+  }, [audioMuted, setAudioMuted]);
+
+  /* ── Volume Control ─────────────────────────────────────────────────── */
+  const handleVolumeChange = useCallback((value: number) => {
+    const volume = value / 100;
+    currentVolumeRef.current = volume;
+    audioEls.current.forEach((el) => {
+      if ("volume" in el) {
+        (el as HTMLMediaElement).volume = volume;
+      }
+    });
+
+    // Also update ElevenLabs TTS service volume
+    import('@/services/elevenlabs-tts').then(({ elevenLabsTTS }) => {
+      elevenLabsTTS.setVolume(volume);
+    }).catch(console.warn);
+  }, []);
 
   /* ── Pause / Resume Search ──────────────────────────────────────────── */
-  const handleToggleSearch = useCallback(() => {
+  const handleToggleSearch = useCallback(async () => {
     if (isSearching) {
       isSearchingRef.current = false;
       setIsSearching(false);
       clearTimers();
-      teardownRoom(roomRef.current, currentRoomName.current);
+      await teardownRoom(roomRef.current, currentRoomName.current);
       roomRef.current = null;
       currentRoomName.current = null;
       resetPeerState();
@@ -820,9 +947,9 @@ export function useVideoSession({
       setStatus("connecting");
       setStatusMessage(String(t("videochat.status.resuming")));
       isJoiningRef.current = false;
-      setTimeout(() => { if (mountedRef.current) joinRoom(); }, 400);
+      if (mountedRef.current) joinRoomRef.current?.();
     }
-  }, [isSearching, clearTimers, teardownRoom, resetPeerState, joinRoom, cleanupAudio]);
+  }, [isSearching, clearTimers, teardownRoom, resetPeerState, cleanupAudio, t]);
 
   /* ── Exit ───────────────────────────────────────────────────────────── */
   const handleExit = useCallback(() => {
@@ -834,8 +961,8 @@ export function useVideoSession({
     localStreamRef.current = null;
     if (localVideoRef.current) localVideoRef.current.srcObject = null;
     if (roomRef.current) {
-      try { roomRef.current.removeAllListeners(); } catch (_) { }
-      try { roomRef.current.disconnect(true); } catch (_) { }     // true = stop tracks
+      try { roomRef.current.removeAllListeners(); } catch (e) { console.warn("Cleaned up error:", e); }
+      try { roomRef.current.disconnect(true); } catch (e) { console.warn("Cleaned up error:", e); }     // true = stop tracks
     }
     notifyLeave(currentRoomName.current);
     roomRef.current = null;
@@ -856,9 +983,11 @@ export function useVideoSession({
 
   /* ── API ────────────────────────────────────────────────────────────── */
   return {
-    status, statusMessage, connected, cameraMuted, remoteCameraMuted, isSearching, connectionQuality, remotePeerIdentity,
+    status, statusMessage, connected, cameraMuted, audioMuted, remoteCameraMuted, isSearching, connectionQuality, remotePeerIdentity,
     localVideoRef, remoteVideoRef, localStreamRef, roomRef,
-    sendData, handleSkip, handleToggleCamera, handleToggleSearch, handleExit, retryCamera,
+    sendData, handleSkip, handleToggleCamera, handleToggleAudio, handleToggleSearch, handleExit, retryCamera,
+    handleVolumeChange,
     audioEls,
   };
 }
+

@@ -70,6 +70,9 @@ export default defineConfig({
     appleEmojiPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
+      },
       includeAssets: ['favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
         name: 'SkillSwap',
@@ -149,3 +152,4 @@ export default defineConfig({
     },
   },
 });
+

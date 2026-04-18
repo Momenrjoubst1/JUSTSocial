@@ -50,7 +50,7 @@ function getNotifIcon(type: string) {
 function SiteLogo() {
     return (
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-cyan-500 flex items-center justify-center border border-indigo-400/30">
-            <BrandLogo glowColor="#fff" strokeWidth={8} className="w-6 h-7" />
+            <BrandLogo simple className="w-6 h-7 text-white" />
         </div>
     );
 }
@@ -155,7 +155,17 @@ export default function NotificationsPanel({ userId, notificationCount, setNotif
         e.stopPropagation(); // Don't navigate when clicking delete
         // Optimistic removal with exit animation
         setNotifications(prev => prev.filter(n => n.id !== id));
-        await supabase.from('notifications').delete().eq('id', id);
+        
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!session?.access_token) return;
+            fetch(`/api/notifications/${id}`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.access_token}`
+                }
+            }).catch(e => console.error("Failed to delete notification", e));
+        });
     };
 
     const getActorAvatar = (n: Notification) => {

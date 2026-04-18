@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
 import { authMiddleware } from '../../middleware/auth.middleware';
-import * as supabaseService from '../../services/supabase.service';
+import * as supabaseService from '../../services/supabase.service.js';
 
 function makeReqRes(headers: Record<string, string> = {}) {
   const req = { headers } as unknown as Request;

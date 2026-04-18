@@ -1,24 +1,6 @@
-import { useCallback } from "react";
-import { useAIAgent as useAIAgentFeature } from "@/pages/videochat/features";
-
-export function useAIAgent() {
-  const {
-    agentActive,
-    agentLoading,
-    agentError,
-    agentMessage,
-    isStreaming,
-    startForRoom,
-    stopForRoom,
-  } = useAIAgentFeature();
-
-  return {
-    isActive: agentActive,
-    isLoading: agentLoading,
-    error: agentError,
-    message: agentMessage,
-    isStreaming,
-    startForRoom,
-    stopForRoom,
-  };
-}
+/**
+ * Re-export useAIAgent from features layer.
+ * The features hook now returns the final property names directly:
+ * { isActive, isLoading, error, message, isStreaming, startForRoom, stopForRoom }
+ */
+export { useAIAgent } from "@/pages/videochat/features";

@@ -46,7 +46,7 @@ export function useCollaboration(): CollaborationState & CollaborationActions {
   const initializeHost = useCallback(async (userName: string): Promise<string> => {
       try {
 
-          const peerId = `skillswap-host-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
+          const peerId = `skillswap-host-${crypto.randomUUID()}`;
           setState((prev) => ({
             ...prev,
             peerId,
@@ -55,14 +55,15 @@ export function useCollaboration(): CollaborationState & CollaborationActions {
           return peerId;
         
       } catch (error) {
-        console.error('[useCollaboration.ts] [anonymous_function]:', error);
+        console.error('[useCollaboration.ts] [initializeHost]:', error);
+        return `skillswap-host-error-${crypto.randomUUID()}`;
       }
   }, []);
 
   const connectToHost = useCallback(async (hostPeerId: string, userName: string): Promise<void> => {
       try {
 
-          const peerId = `skillswap-client-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
+          const peerId = `skillswap-client-${crypto.randomUUID()}`;
           setState((prev) => ({
             ...prev,
             peerId,
@@ -71,7 +72,7 @@ export function useCollaboration(): CollaborationState & CollaborationActions {
           }));
         
       } catch (error) {
-        console.error('[useCollaboration.ts] [anonymous_function]:', error);
+        console.error('[useCollaboration.ts] [connectToHost]:', error);
       }
   }, []);
 

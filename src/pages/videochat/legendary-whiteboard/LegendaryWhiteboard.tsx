@@ -12,6 +12,7 @@ import React, {
 } from 'react';
 import { DrawingEngine } from './core/engine/DrawingEngine';
 import { WhiteboardStateManager } from './core/engine/StateManager';
+import { rafThrottle } from '@/utils/mouse.performance';
 
 import {
   Point,
@@ -60,7 +61,7 @@ export const LegendaryWhiteboard = forwardRef<HTMLCanvasElement, LegendaryWhiteb
   ) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
-    const [currentPoints, setCurrentPoints] = useState<Point[]>([]);
+    const currentPointsRef = useRef<Point[]>([]); // Use ref instead of state to avoid re-renders
     const [stateManager] = useState(() => new WhiteboardStateManager());
     const [drawingEngine, setDrawingEngine] = useState<DrawingEngine | null>(null);
 
@@ -154,13 +155,14 @@ export const LegendaryWhiteboard = forwardRef<HTMLCanvasElement, LegendaryWhiteb
         };
 
         setIsDrawing(true);
-        setCurrentPoints([point]);
+        currentPointsRef.current = [point];
       },
       []
     );
 
+    // Throttle mouse move to avoid excessive re-renders
     const handleMouseMove = useCallback(
-      (e: React.MouseEvent<HTMLCanvasElement>) => {
+      rafThrottle((e: React.MouseEvent<HTMLCanvasElement>) => {
         if (!isDrawing || !canvasRef.current) return;
 
         const rect = canvasRef.current.getBoundingClientRect();
@@ -170,14 +172,14 @@ export const LegendaryWhiteboard = forwardRef<HTMLCanvasElement, LegendaryWhiteb
           pressure: (e as any).pressure || 1,
         };
 
-        setCurrentPoints((prev) => [...prev, point]);
+        currentPointsRef.current.push(point);
 
         // Real-time rendering while drawing
         if (drawingEngine && currentTool === 'pen') {
           const previewShape: PenStroke = {
             id: 'preview',
             type: 'pen-stroke',
-            points: [...currentPoints, point],
+            points: currentPointsRef.current,
             opacity: 1,
             rotation: 0,
             zIndex: 0,
@@ -192,12 +194,12 @@ export const LegendaryWhiteboard = forwardRef<HTMLCanvasElement, LegendaryWhiteb
             },
           };
 
-          // Render preview
+          // Render preview directly without triggering re-render
           drawingEngine.clear();
           drawingEngine.renderShape(previewShape);
         }
-      },
-      [isDrawing, currentTool, currentPoints, drawingEngine]
+      }),
+      [isDrawing, currentTool, drawingEngine]
     );
 
     const handleMouseUp = useCallback(() => {
@@ -205,11 +207,11 @@ export const LegendaryWhiteboard = forwardRef<HTMLCanvasElement, LegendaryWhiteb
 
       setIsDrawing(false);
 
-      if (currentPoints.length > 2 && currentTool === 'pen') {
+      if (currentPointsRef.current.length > 2 && currentTool === 'pen') {
         const shape: PenStroke = {
           id: `stroke-${Date.now()}`,
           type: 'pen-stroke',
-          points: currentPoints,
+          points: currentPointsRef.current,
           opacity: 1,
           rotation: 0,
           zIndex: 0,
@@ -230,8 +232,8 @@ export const LegendaryWhiteboard = forwardRef<HTMLCanvasElement, LegendaryWhiteb
         onShapeAdd?.(shape);
       }
 
-      setCurrentPoints([]);
-    }, [isDrawing, currentTool, currentPoints, stateManager, onShapeAdd]);
+      currentPointsRef.current = [];
+    }, [isDrawing, currentTool, stateManager, onShapeAdd]);
 
     // Keyboard handlers
     useEffect(() => {
@@ -263,7 +265,7 @@ export const LegendaryWhiteboard = forwardRef<HTMLCanvasElement, LegendaryWhiteb
 
     const canvasStyle: React.CSSProperties = {
       display: 'block',
-      cursor: currentTool === 'pen' ? 'crosshair' : 'default',
+      cursor: 'auto', // Use normal cursor
     };
 
     return (
