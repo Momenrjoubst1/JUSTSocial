@@ -35,14 +35,14 @@ logger = logging.getLogger(__name__)
 
 # ─── Environment ─────────────────────────────────────────────────────────────
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-GAMMA_MODEL = os.getenv("GAMMA_MODEL", "gamma-4-31b")
+GAMMA_MODEL = os.getenv("GAMMA_MODEL", "meta-llama/llama-3.1-8b-instruct:free")
 
 if not OPENROUTER_API_KEY:
     logger.error("❌ OPENROUTER_API_KEY مطلوب")
     raise SystemExit(1)
+# Azure Speech is optional for pure text agents, but logs warning if missing
 if not os.getenv("AZURE_SPEECH_KEY") or not os.getenv("AZURE_SPEECH_REGION"):
-    logger.error("❌ AZURE_SPEECH_KEY و AZURE_SPEECH_REGION مطلوبان للـ STT")
-    raise SystemExit(1)
+    logger.warning("⚠️ AZURE_SPEECH_KEY is missing. Voice-to-Text (STT) will be disabled.")
 
 # ─── System Prompt ───────────────────────────────────────────────────────────
 SYSTEM_PROMPT = """أنت مساعد ذكي جداً يتحدث العربية بطلاقة.
