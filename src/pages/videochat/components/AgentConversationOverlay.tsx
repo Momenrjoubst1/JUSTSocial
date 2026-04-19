@@ -111,6 +111,9 @@ export const AgentConversationOverlay = memo(function AgentConversationOverlay({
       const transcript = result[0].transcript;
       const isFinal = result.isFinal;
       const sid = streamId;
+
+      console.log(`🎙️ [Speech] ${isFinal ? "Final" : "Interim"}: ${transcript}`);
+
       setLocalSpeechBubbles((prev) => {
         const idx = prev.findIndex((b) => b.id === sid);
         if (idx >= 0) {
@@ -120,12 +123,15 @@ export const AgentConversationOverlay = memo(function AgentConversationOverlay({
         }
         return [...prev.slice(-(MAX_LOCAL_BUBBLES - 1)), { id: sid, text: transcript, done: isFinal, createdAt: Date.now() }];
       });
+
       if (isFinal && transcript.trim()) {
+        console.log(`📤 Sending prompt to AI: ${transcript.trim()}`);
         sendDataRef.current?.({ type: "ai_prompt", text: transcript.trim() });
         streamId = createId("speech");
       }
     };
     recognition.onerror = (e: any) => {
+      console.error("❌ [Speech Recognition Error]:", e.error);
       if (e.error !== "aborted" && e.error !== "no-speech") console.warn("[Speech]", e.error);
     };
     recognition.onend = () => {
