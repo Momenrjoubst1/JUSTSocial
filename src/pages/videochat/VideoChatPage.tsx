@@ -28,6 +28,9 @@ export default function VideoChatPage(props: VideoChatPageProps) {
     if (!ai.isActive) {
       // We no longer call elevenLabsTTS.stop() here so last messages can finish
       spokenBubblesRef.current.clear();
+      // Clear conversation bubbles for a fresh start next time
+      setAiBubbles([]);
+      setUserBubbles([]);
     }
   }, [ai.isActive]);
 

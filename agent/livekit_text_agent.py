@@ -60,9 +60,8 @@ from livekit.plugins import azure, silero
 from livekit.plugins import openai as lk_openai
 
 # ─── Server & entrypoint ──────────────────────────────────────────────────────
-server = AgentServer()
+# Server definition removed in favor of WorkerOptions cli.run_app
 
-@server.rtc_session(agent_name="phi4-vision-agent")
 async def phi4_agent(ctx: agents.JobContext) -> None:
     await ctx.connect()
 
@@ -356,4 +355,10 @@ async def phi4_agent(ctx: agents.JobContext) -> None:
 
 
 if __name__ == "__main__":
-    agents.cli.run_app(server)
+    from livekit.agents import WorkerOptions, cli
+    
+    # We use WorkerOptions directly for better deployment stability on Railway
+    cli.run_app(WorkerOptions(
+        entrypoint_fnc=phi4_agent,
+        agent_name="phi4-vision-agent",
+    ))
