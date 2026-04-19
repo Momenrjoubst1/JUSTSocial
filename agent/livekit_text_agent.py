@@ -46,7 +46,11 @@ async def entrypoint(ctx: JobContext):
         if full_text:
             logger.info(f"🤖 Replying: {full_text}")
             await ctx.room.local_participant.publish_data(
-                json.dumps({"type": "user_msg", "text": full_text, "done": True}).encode("utf-8"),
+                json.dumps({
+                    "type": "ai_msg",
+                    "message": { "text": full_text },
+                    "done": True
+                }).encode("utf-8"),
                 reliable=True
             )
 
