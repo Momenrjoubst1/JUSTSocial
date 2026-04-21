@@ -252,6 +252,8 @@ export default function DecryptedText({
             return nextSet;
           }
         }
+        // Fallback return to satisfy all code paths
+        return prevRevealed;
       });
     }, speed);
     return () => clearInterval(intervalRef.current ?? undefined);

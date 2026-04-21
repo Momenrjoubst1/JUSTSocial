@@ -76,36 +76,41 @@ export function ChatInputBar({
               <div className="ai-input-field">
                 <input
                   ref={chatInputRef}
-                  placeholder="Send message"
+                  placeholder={connected ? "Send message" : "Waiting for connection..."}
                   type="text"
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setChatInputOpen(false);
+                    }
                     if (e.key === "Enter") {
-                      handleSendMessage();
-                      if (connected && messageInput.trim()) setChatInputOpen(false);
+                      e.preventDefault(); // Prevent default behavior (like form submission)
+                      if (connected && messageInput.trim()) {
+                        handleSendMessage();
+                        setChatInputOpen(false);
+                      }
                     }
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") setChatInputOpen(false);
-                  }}
                   style={{ cursor: "text", opacity: 1 }}
+                  disabled={!connected}
                 />
               </div>
-              <button
-                id="send-button"
-                aria-label="Send message"
-                title="Send message"
-                onClick={() => {
-                  if (typeof navigator !== "undefined" && navigator.vibrate) {
-                    navigator.vibrate(50);
-                  }
-                  handleSendMessage();
-                  if (connected && messageInput.trim()) setChatInputOpen(false);
-                }}
-                disabled={!messageInput.trim()}
-                style={{ opacity: messageInput.trim() ? 1 : 0.5 }}
-              >
+                <button
+                  id="send-button"
+                  aria-label="Send message"
+                  title="Send message"
+                  onClick={() => {
+                    if (!connected || !messageInput.trim()) return;
+                    if (typeof navigator !== "undefined" && navigator.vibrate) {
+                      navigator.vibrate(50);
+                    }
+                    handleSendMessage();
+                    setChatInputOpen(false);
+                  }}
+                  disabled={!connected || !messageInput.trim()}
+                  style={{ opacity: messageInput.trim() ? 1 : 0.5, cursor: (!connected || !messageInput.trim()) ? "not-allowed" : "pointer" }}
+                >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <path strokeLinejoin="round" strokeLinecap="round" strokeWidth="2" stroke="currentColor" d="M22 2L11 13" />
                   <path strokeLinejoin="round" strokeLinecap="round" strokeWidth="2" stroke="currentColor" d="M22 2L15 22L11 13L2 9L22 2Z" />

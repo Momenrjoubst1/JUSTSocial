@@ -12,7 +12,7 @@ if (nodeEnv === 'production' && frontendOrigins.length === 0) {
 }
 
 export const appConfig = {
-  port: Number(process.env.PORT) || 3001,
+  port: Number(process.env.PORT) || 3004,
   frontendOrigins,
   bodyLimit: '10mb',
   nodeEnv,

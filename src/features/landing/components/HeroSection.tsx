@@ -31,7 +31,7 @@ export const HeroSection = ({ isLoggedIn, onStartClick, scrollToFeatures }: Hero
         {!isFinished && (
           <motion.div
             initial={{ opacity: 1 }}
-            exit={{ opacity: 0, filter: "blur(10px)" }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 1.5, ease: "easeInOut" }}
             className="flex flex-col items-center justify-center w-full relative z-20"
           >

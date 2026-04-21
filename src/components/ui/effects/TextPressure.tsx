@@ -240,7 +240,7 @@ const TextPressure = ({
         {chars.map((char, i) => (
           <span
             key={i}
-            ref={el => (spansRef.current[i] = el)}
+            ref={el => { spansRef.current[i] = el; }}
             data-char={char}
             style={{
               display: 'inline-block',

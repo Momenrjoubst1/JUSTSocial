@@ -17,7 +17,7 @@ interface SplitTextProps {
   threshold?: number;
   rootMargin?: string;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
-  tag?: keyof JSX.IntrinsicElements;
+  tag?: keyof React.JSX.IntrinsicElements;
   onLetterAnimationComplete?: () => void;
 }
 
@@ -73,7 +73,6 @@ const SplitText: React.FC<SplitTextProps> = ({
             animationCompletedRef.current = true;
             onCompleteRef.current?.();
           },
-          force3D: true
         }
       );
 

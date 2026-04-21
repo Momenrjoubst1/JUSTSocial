@@ -1,1 +1,0 @@
-worker: python livekit_text_agent.py start

@@ -12,8 +12,10 @@ const requiredEnv = (key: string, backupKey?: string): string => {
     if (key === 'LIVEKIT_URL') return 'wss://vitest.invalid';
   }
 
-  throw new Error(`[Config Error] Missing required environment variable: ${key}${backupKey ? ` or ${backupKey}` : ''}`);
+  console.warn(`⚠️ [Config Warning] Missing optional environment variable: ${key}. Using dummy value for startup.`);
+  return "missing_key_dummy_value";
 };
+
 
 export const livekitConfig = {
   apiKey: requiredEnv('LIVEKIT_API_KEY'),

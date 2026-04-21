@@ -118,7 +118,7 @@ export function useChat() {
                 .limit(50);
                 
             if (data && !error && isMounted) {
-                const decryptedData = [];
+                const decryptedData: (DbMessage & { text: string; metadata: any })[] = [];
                 for (let i = 0; i < data.length; i++) {
                     if (!isMounted) break;
                     const m = data[i] as DbMessage;
@@ -132,6 +132,7 @@ export function useChat() {
                             text = await decryptHybridMessage(privateKey!, user.id!, m.sender_id, m.encrypted_content);
                         }
                     }
+                    decryptedData.push({ ...m, text, metadata: m.metadata });
                     // Yield to main thread every 10 messages (LRU cache makes cached hits instant)
                     if (i % 10 === 9) await new Promise(r => requestAnimationFrame(r));
                 }

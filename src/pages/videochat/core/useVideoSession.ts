@@ -88,6 +88,7 @@ export interface UseVideoSessionReturn {
   handleToggleSearch: () => void;
   handleExit: () => void;
   retryCamera: () => Promise<void>;
+  handleVolumeChange: (value: number) => void;
   audioEls: React.MutableRefObject<HTMLElement[]>;
 }
 
@@ -159,7 +160,8 @@ export function useVideoSession({
     if (!room || !room.localParticipant) return;
 
     if (aiActive && peer) {
-      // Allow the human peer to see video, but not hear audio
+      // Allow the human peer to see video, but not hear their own audio
+      // However, we still want to hear the AGENT's audio!
       const allowedSids: string[] = [];
       room.localParticipant.videoTrackPublications.forEach((pub) => {
         if (pub.trackSid) allowedSids.push(pub.trackSid);
@@ -171,6 +173,7 @@ export function useVideoSession({
           allowedTrackSids: allowedSids,
         },
       ]);
+      // Note: Agent audio is published separately, so it will still be heard
       console.warn(`🔇 [VideoChat] Muted audio to peer (${peer.identity}) because AI is active.`);
     } else {
       // Revert to everyone is allowed
@@ -318,6 +321,19 @@ export function useVideoSession({
         const el = track.attach();
         if ("volume" in el) {
           (el as HTMLMediaElement).volume = currentVolumeRef.current;
+        }
+        // Ensure audio elements are not muted and are properly configured
+        if (el instanceof HTMLMediaElement) {
+          el.muted = false;
+          el.autoplay = true;
+          el.controls = false;
+          el.style.display = 'none'; // Hidden but still plays sound
+          console.log('[AudioTrack] Agent audio attached:', { 
+            trackName: _pub?.trackName,
+            volume: currentVolumeRef.current,
+            muted: el.muted,
+            autoplay: el.autoplay 
+          });
         }
         document.body.appendChild(el);
         audioEls.current.push(el);

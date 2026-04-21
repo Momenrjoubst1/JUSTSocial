@@ -7,11 +7,6 @@ import {
   type VideoChatPageProps as BaseProps,
   type VideoSessionParticipant,
 } from "@/pages/videochat/core";
-
-export interface VideoChatPageProps extends BaseProps {
-  onExtraDataReceived?: (raw: any) => void;
-  aiActive?: boolean;
-}
 import { useModeration, type UseModerationReturn } from "@/pages/videochat/core/useModeration";
 import { useCountryPreference } from "@/pages/videochat/core/useCountryPreference";
 import { COUNTRIES } from "@/pages/videochat/core/countries";
@@ -20,6 +15,12 @@ import { useFingerprint } from "@/hooks/useFingerprint";
 import { useScreenShare } from "@/features/screen-share";
 import type { InfiniteMenuItem } from "@/components/ui/navigation";
 import type { WatchSyncMessage } from "@/features/watch-mode/types";
+import { useMicPcmStream } from "@/features/ai-agent/hooks/useMicPcmStream";
+
+export interface VideoChatPageProps extends BaseProps {
+  onExtraDataReceived?: (raw: any) => void;
+  aiActive?: boolean;
+}
 
 export interface VideoUserInfo {
   name: string;
@@ -316,6 +317,13 @@ export function useVideoPageState(props: VideoChatPageProps) {
     [],
   );
 
+  const sendInterrupt = useCallback((reason: "new_prompt" | "user_speaking" | "skip" = "new_prompt") => {
+    sendData({
+      type: "interrupt",
+      reason,
+    });
+  }, [sendData]);
+
   const handleSendMessage = useCallback(async () => {
     if (!connected) {
       if (notConnectedTimerRef.current) {
@@ -344,8 +352,9 @@ export function useVideoPageState(props: VideoChatPageProps) {
       return;
     }
 
+    sendInterrupt("new_prompt");
     sendMessage();
-  }, [connected, messageInput, sendMessage]);
+  }, [connected, messageInput, sendMessage, sendInterrupt]);
 
   const handleReportUser = useCallback(async () => {
     if (!connected || !remotePeerIdentity) {
@@ -630,6 +639,13 @@ export function useVideoPageState(props: VideoChatPageProps) {
     };
   }, []);
 
+  // ربط إرسال الصوت للـ Agent عند تفعيل AI والاتصال
+  useMicPcmStream({
+    enabled: (props.aiActive ?? false) && connected,
+    stream: localStreamRef.current,
+    sendData,
+  });
+
   return {
     t,
     onExit,
@@ -720,6 +736,7 @@ export function useVideoPageState(props: VideoChatPageProps) {
     setChatInputOpen,
     notConnectedToast,
     handleSendMessage,
+    sendInterrupt,
 
     screenShare,
     handleReportUser,

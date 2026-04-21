@@ -179,7 +179,6 @@ export function useAIAgent(): UseAIAgentReturn {
     agentError,
     agentMessage,
     isStreaming,
-    setIsStreaming,
     startAgent,
     stopAgent,
     checkAgentStatus

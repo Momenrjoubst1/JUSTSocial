@@ -28,9 +28,6 @@ export default function VideoChatPage(props: VideoChatPageProps) {
     if (!ai.isActive) {
       // We no longer call elevenLabsTTS.stop() here so last messages can finish
       spokenBubblesRef.current.clear();
-      // Clear conversation bubbles for a fresh start next time
-      setAiBubbles([]);
-      setUserBubbles([]);
     }
   }, [ai.isActive]);
 
@@ -46,59 +43,74 @@ export default function VideoChatPage(props: VideoChatPageProps) {
     ...props,
     aiActive: ai.isActive,
     onExtraDataReceived: (raw) => {
-      // Only process AI messages if the AI agent is active for this user
-      if ((raw.type === "ai_msg" || raw.type === "ai_msg_stream") && !ai.isActive) {
-        return;
+      // Log all incoming messages for debugging
+      if (raw.type && raw.type.startsWith("ai_") || raw.type.startsWith("user_")) {
+        console.log(`[Agent Data] ${raw.type}:`, raw);
       }
       
-      if (raw.type === "ai_msg") {
-        const id = Math.random().toString(36).substring(7);
-        setAiBubbles((prev) => [...prev, { id, text: raw.message?.text || "", done: true, createdAt: Date.now() }].slice(-50));
-      } else if (raw.type === "ai_msg_stream") {
-        const streamId = raw.stream_id;
+      // Handle new protocol messages: ai_token, ai_done
+      if (raw.type === "ai_token") {
+        const streamId = raw.stream_id || "ai_stream";
         const text = raw.text || "";
-        const isFinal = raw.is_final;
-
-        if (!isFinal) {
-          ai.setIsStreaming(true);
-        }
 
         setAiBubbles((prev) => {
           const index = prev.findIndex((b) => b.id === streamId);
-          if (isFinal) {
-            // Mark as done (hide cursor)
-            if (index !== -1) {
-              const updated = [...prev];
-              updated[index] = { ...updated[index], done: true };
-              return updated;
-            }
-            return prev;
-          }
           if (index === -1) {
-            // New bubble
+            // New bubble - create it
             return [...prev, { id: streamId, text: text, done: false, createdAt: Date.now() }].slice(-50);
           } else {
-            // Append to existing bubble
+            // Append token to existing bubble
             const updated = [...prev];
             updated[index] = { ...updated[index], text: updated[index].text + text };
             return updated;
           }
         });
+      } else if (raw.type === "ai_done") {
+        const streamId = raw.stream_id || "ai_stream";
 
-        if (isFinal) {
-          ai.setIsStreaming(false);
-          // 🔊 Speak the completed AI reply via ElevenLabs TTS
-          setAiBubbles((currentBubbles) => {
-            const bubble = currentBubbles.find((b) => b.id === streamId);
-            if (bubble && bubble.text && !spokenBubblesRef.current.has(streamId)) {
+        setAiBubbles((prev) => {
+          const index = prev.findIndex((b) => b.id === streamId);
+          if (index !== -1) {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], done: true };
+            
+            // 🔊 Speak the completed AI reply via ElevenLabs TTS
+            const bubble = updated[index];
+            if (bubble.text && !spokenBubblesRef.current.has(streamId)) {
               spokenBubblesRef.current.add(streamId);
               elevenLabsTTS.speak(bubble.text).catch((e) =>
                 console.error("[TTS] Speech failed:", e)
               );
             }
-            return currentBubbles; // no mutation, read-only access
-          });
-        }
+            
+            return updated;
+          }
+          return prev;
+        });
+      } else if (raw.type === "user_partial") {
+        const text = raw.text || "";
+        const streamId = "user_live";
+        setUserBubbles((prev) => {
+          const index = prev.findIndex((b) => b.id === streamId);
+          if (index === -1) {
+            return [...prev, { id: streamId, text, done: false, createdAt: Date.now() }].slice(-50);
+          }
+          const updated = [...prev];
+          updated[index] = { ...updated[index], text };
+          return updated;
+        });
+      } else if (raw.type === "user_final") {
+        const text = raw.text || "";
+        const streamId = "user_live";
+        setUserBubbles((prev) => {
+          const index = prev.findIndex((b) => b.id === streamId);
+          if (index !== -1) {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], text, done: true };
+            return updated;
+          }
+          return [...prev, { id: streamId, text, done: true, createdAt: Date.now() }].slice(-50);
+        });
       } else if (raw.type === "user_msg_stream") {
         const streamId = raw.stream_id || "user_live";
         const text = raw.text || "";
@@ -125,6 +137,9 @@ export default function VideoChatPage(props: VideoChatPageProps) {
         });
       } else if (raw.type === "user_msg") {
         // Disabled: Rely on user_msg_stream is_final=true to prevent duplication
+      } else if (raw.type === "ai_msg" || raw.type === "ai_msg_stream") {
+        // Legacy protocol support - should not be used with new backend
+        console.warn("⚠️ Received legacy AI protocol (ai_msg/ai_msg_stream), update backend to use ai_token/ai_done");
       } else {
         chess.handleChessMessage(raw);
       }

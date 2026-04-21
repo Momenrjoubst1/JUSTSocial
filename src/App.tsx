@@ -12,6 +12,7 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { PageErrorFallback } from "@/components/ui/PageErrorFallback";
 import { useAuthRefresh } from "@/features/auth/hooks/useAuthRefresh";
 import { WelcomeOverlay } from "@/components/ui/effects/WelcomeOverlay";
+import { FloatingAssistant } from "@/features/ai-assistant";
 
 
 import { LandingPage } from "@/pages/landing/LandingPage";
@@ -645,6 +646,9 @@ export function App() {
         userName={welcomeName} 
         onClose={() => setShowWelcomeScreen(false)} 
       />
+
+      {/* Floating Assistant */}
+      <FloatingAssistant />
 
       </div>
     </ErrorBoundary>

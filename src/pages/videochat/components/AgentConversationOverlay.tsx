@@ -78,69 +78,21 @@ export const AgentConversationOverlay = memo(function AgentConversationOverlay({
   audioMuted = false,
   sendData,
 }: AgentConversationOverlayProps) {
-  // ── Browser Speech Recognition (primary input for user speech) ──────────
+  // ── Removed Browser Speech Recognition to avoid microphone conflicts ──────────
+  // The agent (LiveKit Python backend) should now handle STT via Azure.
   const [localSpeechBubbles, setLocalSpeechBubbles] = React.useState<SpeechBubble[]>([]);
   const displayLocalBubbles = localSpeechBubbles.length > 0 ? localSpeechBubbles : userBubbles;
-  const recognitionRef = React.useRef<any>(null);
   const activeRef = React.useRef(false);
   const sendDataRef = React.useRef(sendData);
   React.useEffect(() => { sendDataRef.current = sendData; });
 
   React.useEffect(() => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch {}
-      recognitionRef.current = null;
-    }
     if (!aiActive || !connected || audioMuted) {
       activeRef.current = false;
       return;
     }
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { console.warn("[AgentOverlay] SpeechRecognition not supported"); return; }
-
     activeRef.current = true;
-    let streamId = createId("speech");
-    const recognition = new SR();
-    recognition.lang = "ar";
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = (event: any) => {
-      const result = event.results[event.resultIndex];
-      const transcript = result[0].transcript;
-      const isFinal = result.isFinal;
-      const sid = streamId;
-
-      console.log(`🎙️ [Speech] ${isFinal ? "Final" : "Interim"}: ${transcript}`);
-
-      setLocalSpeechBubbles((prev) => {
-        const idx = prev.findIndex((b) => b.id === sid);
-        if (idx >= 0) {
-          const next = [...prev];
-          next[idx] = { ...next[idx], text: transcript, done: isFinal };
-          return next;
-        }
-        return [...prev.slice(-(MAX_LOCAL_BUBBLES - 1)), { id: sid, text: transcript, done: isFinal, createdAt: Date.now() }];
-      });
-
-      if (isFinal && transcript.trim()) {
-        console.log(`📤 Sending prompt to AI: ${transcript.trim()}`);
-        sendDataRef.current?.({ type: "ai_prompt", text: transcript.trim() });
-        streamId = createId("speech");
-      }
-    };
-    recognition.onerror = (e: any) => {
-      console.error("❌ [Speech Recognition Error]:", e.error);
-      if (e.error !== "aborted" && e.error !== "no-speech") console.warn("[Speech]", e.error);
-    };
-    recognition.onend = () => {
-      if (activeRef.current) setTimeout(() => {
-        if (activeRef.current) try { recognition.start(); } catch {}
-      }, 300);
-    };
-    try { recognition.start(); recognitionRef.current = recognition; } catch {}
-    return () => { activeRef.current = false; try { recognition.abort(); } catch {}; recognitionRef.current = null; };
+    return () => { activeRef.current = false; };
   }, [aiActive, connected, audioMuted]);
 
   // No auto-clearing logic anymore so user can scroll back.

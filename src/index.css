@@ -65,28 +65,28 @@
 
   .dark,
   [data-theme="dark"] {
-    /* 🌌 Dark Theme - Deep Space, Sleek, Neon glow ✨ -> Now Minimalist */
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 100%;
-    --card: 0 0% 8.6%;
-    --card-foreground: 0 0% 100%;
-    --popover: 0 0% 8.6%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 0 0% 100%;
-    --primary-foreground: 0 0% 3.9%;
-    --secondary: 0 0% 12.2%;
-    --secondary-foreground: 0 0% 63.1%;
-    --muted: 0 0% 12.2%;
-    --muted-foreground: 0 0% 32.2%;
-    --accent: 0 0% 12.2%;
-    --accent-foreground: 0 0% 100%;
+    /* 🌌 Dark Theme - Optimized for Assistant UI Demo Match ✨ */
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 4.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 14.9%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 20.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
 
-    /* 🎮 Video Chat UI - Dark Theme */
+    /* 🎮 Video Chat UI - Dark Theme (Keeping existing values) */
     --vc-bg: 0 0% 3.9%;
     --vc-surface: 0 0% 8.6%;
     --vc-panel-bg: 0 0% 8.6%;
@@ -106,15 +106,17 @@
     border-color: var(--border);
   }
 
-  body,
   html,
-  #root,
-  main {
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
     background-color: var(--background);
     color: var(--foreground);
-    min-height: 100vh;
     width: 100%;
-    overflow-x: hidden;
     transition: background-color 0.5s ease, color 0.5s ease;
     cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' x='0px' y='0px' width='24' height='24' viewBox='0 0 30 30' fill='black' stroke='white' stroke-width='1.5'%3E%3Cpath d='M 9 3 A 1 1 0 0 0 8 4 L 8 21 A 1 1 0 0 0 9 22 A 1 1 0 0 0 9.796875 21.601562 L 12.919922 18.119141 L 16.382812 26.117188 C 16.701812 26.855187 17.566828 27.188469 18.298828 26.855469 C 19.020828 26.527469 19.340672 25.678078 19.013672 24.955078 L 15.439453 17.039062 L 21 17 A 1 1 0 0 0 22 16 A 1 1 0 0 0 21.628906 15.222656 L 9.7832031 3.3789062 A 1 1 0 0 0 9 3 z'%3E%3C/path%3E%3C/svg%3E") 8 4, auto;
   }
@@ -596,3 +598,54 @@ textarea.text-transparent::-moz-selection {
     box-shadow: 0 10px 24px rgba(37,99,235,0.35), 0 0 0 0 rgba(79,70,229,0);
   }
 }
+
+/* ── Assistant UI Official Demo Styling Overrides ── */
+:root {
+  --thread-max-width: 44rem;
+}
+
+.dark {
+  /* Ensure thread list background and foreground match demo */
+  .aui-thread-list-item-root {
+    @apply transition-colors hover:bg-muted/50;
+  }
+  
+  .aui-thread-list-item-root[data-active] {
+    @apply bg-muted;
+  }
+
+  /* Welcome Suggestions - Distinct border and background */
+  .aui-thread-welcome-suggestion {
+    @apply border-border/50 bg-background/50 hover:bg-muted/80 backdrop-blur-sm transition-all;
+  }
+
+  /* Welcome Message Contrast */
+  .aui-thread-welcome-message-inner:first-child {
+    @apply text-foreground font-bold tracking-tight;
+  }
+
+  /* User Message Bubble */
+  .aui-user-message-content {
+    @apply bg-muted/80 text-foreground shadow-sm;
+  }
+
+  /* Assistant Message Sidebar / Actions */
+  .aui-assistant-action-bar-root {
+    @apply text-muted-foreground/70;
+  }
+
+  /* Composer Input - Floating look */
+  .aui-composer-root {
+    @apply border-border bg-background/95 backdrop-blur-md shadow-2xl;
+  }
+
+  /* Lexical Placeholder Visibility */
+  .aui-lexical-placeholder {
+    @apply text-muted-foreground/50 pointer-events-none;
+  }
+}
+
+/* Global Transition for smooth mode switching */
+* {
+  transition: background-color 0.1s ease-out, border-color 0.1s ease-out;
+}

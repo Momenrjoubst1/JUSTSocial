@@ -45,6 +45,7 @@ export interface Message {
 export interface VideoChatPageProps {
   onExit: () => void;
   userEmail?: string;
+  roomName?: string;
 }
 
 const rawTokenApiUrl = import.meta.env.DEV
