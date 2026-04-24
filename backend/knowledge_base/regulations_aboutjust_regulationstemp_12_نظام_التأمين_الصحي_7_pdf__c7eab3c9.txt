@@ -1,0 +1,1142 @@
+العنوان: 7.pdf
+الرابط: https://www.just.edu.jo/aboutjust/RegulationsTemp/12%20%D9%86%D8%B8%D8%A7%D9%85%20%D8%A7%D9%84%D8%AA%D8%A3%D9%85%D9%8A%D9%86%20%D8%A7%D9%84%D8%B5%D8%AD%D9%8A/7.pdf
+اسم الملف: 7.pdf
+
+==============================
+
+
+[قسم] تسعيرة االجراءات الطبية السنية في عيادات االختصاص–
+
+[قسم] عيادات طب األسنان التعليمية1
+
+[قسم] رقم االجراء وصف الخدمة سعر االجراء
+
+[قسم] /دينار
+
+[قسم] END01 تبيض داخلي كيميائيا لسن واحد
+
+[قسم] Internal Bleaching / Tooth
+
+[قسم] END02 تبيض خارجي كيميائيا لجميع االسنان
+
+[قسم] External Bleaching Full Mouth
+
+[قسم] END03 عالج اللب لألسنان األمامية / لسن واحد
+
+[قسم] Endodontic Treatment for Anterior teeth / Tooth
+
+[قسم] END04 عالج اللب للضواحك / السن الواحد
+
+[قسم] Endodontic Treatment For Premolar / Tooth
+
+[قسم] END05 عالج اللب لألسنان الخلفية / السن الواحد
+
+[قسم] Endodontic Treatment for molar / Tooth
+
+[قسم] END06 اعادة معالجة القنوات اللبية مع حشوة للقناة الواحدة
+
+[قسم] Re-treatment of Root Canal / Per 1 Canal
+
+[قسم] END07 التنقيب عن قناة متكلسة / مبلغ اضافي على العالج
+
+[قسم] Exploration of Calcified Canal or a Ledge/Additional charge of treatment
+
+[قسم] END08 إخراج أداه مكسورة في القناة اللبية / مبلغ اضافي على العالج
+
+[قسم] Removal of Broken Instrument / Additional Charge of Treatment
+
+[قسم] END09 اصالح ثقب في القناه اللبية/ مبلغ اضافي على العالج
+
+[قسم] Repair of Perforation/ Additional charge of treatment
+
+[قسم] END10
+
+[قسم] حشوة رجعية للجذر باستخدامMTA
+
+[قسم] Retrograde filling with MTA
+
+[قسم] END11 بتر جزئي لللب
+
+[قسم] Partial Pulpotomy (Permanent Tooth)
+
+[قسم] END12 الخدش المجهري للمينا
+
+[قسم] Enamel Micro Abrasion / Tooth
+
+[قسم] END13
+
+[قسم] اغالق الذروة باستخدامMTA
+
+[قسم] Apexification with MTA
+
+[قسم] END14 معالجة لبية من خالل تاج او جسر/مبلغ اضافي على العالج
+
+[قسم] Root canal treatment through crown/bridge_additional charge
+
+[قسم] END15 متابعة الحاالت المعالجة
+
+[قسم] Review Appointment
+
+[قسم] END16 اعادة تنمية االوعية الدموية الستعادة تكوين عصب السن
+
+[قسم] Revascularization
+
+[قسم] FPR01 ترصيع االسنان بالحشوات الفوقية والداخلية بالخزف
+
+[قسم] Inlay / Onlay - Porcelain
+
+[قسم] FPR02 ترصيع االسنان بالحشوات الفوقية والداخلية / معدن ثمين
+
+[قسم] Inlay / Onlay - Precious Metal
+
+[قسم] FPR03 ترصيع االسنان بالحشوات الفوقية والداخلية بالكمبوزت
+
+[قسم] Inlay / Onlay - Composite
+
+[قسم] FPR04 قشرة خزفية / سن واحد
+
+[قسم] Porcelain Laminate Veneer /Tooth
+
+[قسم] FPR05 تاج خزفي من غير معدن / سن واحد
+
+[قسم] Metal Free Ceramic Crown / Tooth
+
+[قسم] FPR06 تاج خزفي على معدن غير ثمين / وحدة
+
+[قسم] Metal - Ceramic Crown (Non Precious Metal) / Unit
+
+[قسم] FPR07 تاج خزفي على معدن ثمين / وحدة
+
+[قسم] Metal - Ceramic Crown (Precious metal) / Unit
+
+[قسم] FPR08 تاج معدني من معدن غير ثمين / وحدة
+
+[قسم] Metal Crown (Non Precious - Metal) / Unit
+
+[قسم] FPR09 تاج معدني من معدن ثمين / وحدة
+
+[قسم] Metal Crown (Precious - Metal) / Unit
+
+[قسم] FPR10 وتد معدني صب من معدن غير ثمين / أسنان أمامية
+
+[قسم] Anterior Casted Post & Core (Non Precious - Metal)
+
+[قسم] FPR11 وتد معدني صب من معدن ثمين / أسنان أمامية
+
+[قسم] Anterior Casted Post & Core (Precious - Metal)
+
+[قسم] FPR12 وتد معدني صب من معدن غير ثمين / أسنان خلفية
+
+[قسم] Posterior Casted Post & Core (Non Precious - Metal)
+
+[قسم] FPR13 وتد معدني صب من معدن ثمين / أسنان خلفية
+
+[قسم] Posterior Casted Post & Core (Precious - Metal)
+
+[قسم] FPR14 وتد جاهز التصنيع
+
+[قسم] Ready Made Post
+
+[قسم] FPR15 وتد غير معدني
+
+[قسم] Non Metal Post
+
+[قسم] FPR16 جسر خزفي على معدن غير ثمين / وحدة
+
+[قسم] Metal - Ceramic Bridge (Non Precious Metal) / Unit
+
+[قسم] FPR17 جسر خزفي على معدن ثمين / وحدة
+
+[قسم] Metal - Ceramic Bridge (Precious Metal) / Unit
+
+[قسم] FPR18 جسر ميرالند / وحدة
+
+[قسم] Resin Bonded Bridge / Unit
+
+[قسم] FPR19 إزالة تاج اصطناعي لسن واحد
+
+[قسم] Crown Removel / One Crown
+
+[قسم] FPR20 إزالة تاج اصطناعي لسن واحد بالقص
+
+[قسم] Crown Removal / Crown (By Sectioning)
+
+[قسم] FPR21 إزالة جسر
+
+[قسم] Bridge Removal
+
+[قسم] FPR22 إزالة جسر بالقص
+
+[قسم] Bridge Removal (By Sectioning)
+
+[قسم] FPR23 إزالة الوتد
+
+[قسم] Post - Removal
+
+[قسم] FPR24
+
+[قسم] تاج
+
+[قسم] مؤقت/وحدة
+
+[قسم] Temporary Crown/each unit
+
+[قسم] FPR25 زراعة االسنان لكل غرسة / التركيبات
+
+[قسم] Dental Implant / Prosthetics Per Unit
+
+[قسم] FPR26 تلبسية خزفية زركونيا
+
+[قسم] Zirconia Crown
+
+[قسم] FPR27 قشرة معدنية
+
+[قسم] Metal laminate veneer
+
+[قسم] FPR28 جديد إزالة تاج مثبت على زرعه
+
+[قسم] Removal of implant retained crown
+
+[قسم] FPR29 جديد ترصيع االسنان بالحشوات الفوقية الداخلية/معدن غير ثمين
+
+[قسم] Inlay / Onlay – Non Precious Metal
+
+[قسم] GEN01 حشوة فضة على سطح واحد من السن
+
+[قسم] Class I Amalgam
+
+[قسم] GEN02 حشوة فضة على سطحين من السن
+
+[قسم] Class II Amalgam
+
+[قسم] GEN03
+
+[قسم] حشوة فضة على3 أسطح من السن
+
+[قسم] Amalgam MOD
+
+[قسم] GEN04 حشوة تجميلية من الكمبوزت على سطح واحد من السن
+
+[قسم] Posterior Composite Class I
+
+[قسم] GEN05 حشوة تجميلية من الكمبوزت على سطحين من السن
+
+[قسم] Posterior Composite Class II
+
+[قسم] GEN06 حشوة تجميلية من الكمبوزت من الدرجة الثالثة
+
+[قسم] Class III Composite
+
+[قسم] GEN07 حشوة تجميلية من الكمبوزت من الدرجة الرابعة
+
+[قسم] Class IV Composite
+
+[قسم] GEN08 حشوة تجميلية من الكمبوزت من الدرجة الخامسة
+
+[قسم] Class V Composite
+
+[قسم] GEN09 عالج اللب مع حشوة القناة الواحدة
+
+[قسم] Endodontic Treatment With G/P Filling for One Canal
+
+[قسم] GEN10 تاج خزفي على معدن غير ثمين لكل وحدة
+
+[قسم] Metal - Ceramic Crown (Non Precious Metal) / Unit
+
+[قسم] GEN11 زيارة طارئه
+
+[قسم] Emergency Visit
+
+[قسم] GEN12 زيارة طارئة مع استئصال عصب سن خلفي
+
+[قسم] Emergency Visit with pulp extirpation/Posterior tooth
+
+[قسم] GEN13 زيارة طارئة مع استئصال عصب سن أمامي
+
+[قسم] Emergency Visit with pulp extirpation/Anterior tooth
+
+[قسم] GEN14 فحص جديد
+
+[قسم] New examination
+
+[قسم] GEN15 تثبيت االسنان المتعرضة لالصابة
+
+[قسم] Splinting Traumatized Teeth
+
+[قسم] GEN16 استئصال عصب سن لبني لطفل
+
+[قسم] Pulp extirpation for primary tooth
+
+[قسم] ITU01 فحص وتشخيص
+
+[قسم] Examination & Diagnosis
+
+[قسم] ITU02 تشخيص ومعالجة امراض الفم
+
+[قسم] Diagnosis and Oral Medicine Treatment
+
+[قسم] ITU03 متابعة معالجة امراض الفم خالل شهر
+
+[قسم] Review Oral Medicine Treatment within one month
+
+[قسم] ITU04
+
+[قسم] صورة
+
+[قسم] شعاعية صغيرة داخل الفم
+
+[قسم] P.A. X-ray
+
+[قسم] قرار مجلس العمداء في جلسته( رقم36
+
+[قسم] /
+
+[قسم] ) بتاريخ2/9/
+
+[قسم] م، ويعمل بها إعتباراً من1/
+
+[قسم] /
+
+[قسم] .م
+
+[قسم] ITU05 صورة شعاعية اطباقية داخل الفم
+
+[قسم] Occlusal X-ray
+
+[قسم] ITU06 صورة شعاعية بانوراما للفكين
+
+[قسم] Panoramic X-ray
+
+[قسم] ITU07 صورة شعاعية جانبية لكل الوجه
+
+[قسم] Cephalometric X-ray
+
+[قسم] ITU08 زيارة عيادة الطوارىء
+
+[قسم] Emergency Clinic
+
+[قسم] ITU09 صورة طبقية للفكين
+
+[قسم] C.T for jaws
+
+[قسم] ITU10 صورة طبقية للرأس والفكين
+
+[قسم] C.T for full skull
+
+[قسم] ITU11 تصوير شعاعي كامل للفم
+
+[قسم] Full mouth X-ray survey
+
+[قسم] ITU12 كتابة التقرير
+
+[قسم] Writing report
+
+[قسم] ITU13 فتح ملف جديد
+
+[قسم] New file
+
+[قسم] OMD01 فحص عينة خاليا او مسحة
+
+[قسم] Cytological Smear or Swab
+
+[قسم] OPR01 حشوة فضة على سطح واحد من السن(صغيرة(
+
+[قسم] Class I Amalgam (simple)
+
+[قسم] OPR02 حشوة فضة على سطح واحد من السن (كبيرة(
+
+[قسم] Class I Amalgam (Extensive)
+
+[قسم] OPR03 حشوة فضة على سطحين من السن (صغيرة(
+
+[قسم] Class II Amalgam (simple)
+
+[قسم] OPR04
+
+[قسم] )حشوة فضية على سطحين من السن (كبيرة
+
+[قسم] Class II Amalgam (Extensive)
+
+[قسم] OPR05
+
+[قسم] حشوة فضة على3 أسطح من السن
+
+[قسم] Amalgam MOD
+
+[قسم] OPR06 حشوة فضة مع بناء لجدار السن
+
+[قسم] Amalgam Restorations (complex amalgam)-Build up of Missing Wall
+
+[قسم] OPR07 حشوة فضة مع تغطية اللب
+
+[قسم] Amalgam Restorations (Direct or Indirect Pulp Capping)
+
+[قسم] OPR08 حشوة مؤقتة
+
+[قسم] Temporary Filling
+
+[قسم] OPR09 حشوة فضة مثبتة بدبوس
+
+[قسم] Pin-Retained Amalgam
+
+[قسم] OPR10 دعامة معدنية داخل قناة السن
+
+[قسم] Endodontic Post
+
+[قسم] OPR11 حشوة تجميلية من الكمبوزت على سطح واحد من السن
+
+[قسم] Class I Posterior Composite
+
+[قسم] OPR12 حشوة تجميلية من الكمبوزت على سطحين من السن
+
+[قسم] Class II Posterior Composite
+
+[قسم] OPR13 حشوة تجميلية من الكمبوزت على ثالث أسطح من السن
+
+[قسم] Posterior Composite MOD
+
+[قسم] OPR14
+
+[قسم] )حشوة تجميلية من الكمبوزت من الدرجة الثالثة (صغيرة
+
+[قسم] Class III Composite (simple)
+
+[قسم] OPR15
+
+[قسم] )حشوة تجميلية من الكمبوزت من الدرجة الثالثة (كبيرة
+
+[قسم] Class III Composites (Extensive)
+
+[قسم] OPR16
+
+[قسم] )حشوة تجميلية من الكمبوزت من الدرجة الرابعة (صغيرة
+
+[قسم] Class IV Composite (Simple)
+
+[قسم] OPR17 حشوة تجميلية من الكمبوزت
+
+[قسم] )من الدرجة الرابعة (كبيرة
+
+[قسم] Class IV Composite (Extensive)
+
+[قسم] OPR18
+
+[قسم] )حشوة تجميلية من الكمبوزت من الدرجة الخامسة (صغيرة
+
+[قسم] Class V Composite (Simple)
+
+[قسم] OPR19
+
+[قسم] )حشوة تجميلية من الكمبوزت من الدرجة الخامسة (كبيرة
+
+[قسم] Class V Composite (Extensive)
+
+[قسم] OPR20 حشوة وقائية من الكمبوزت
+
+[قسم] Composite PRR (CAR)
+
+[قسم] OPR21 وجه تجميلي امامي من الكمبوزت
+
+[قسم] Composites Facing
+
+[قسم] OPR22 حشوة تجميلية من مادة االينمور من الدرجة االولى
+
+[قسم] Class I Glass Ionomer Restoration
+
+[قسم] OPR23 حشوة تجميلية من من مادة االينمور من الدرجة الثانية
+
+[قسم] Class II Glass Ionomer Restoration
+
+[قسم] OPR24 حشوة تجميلية من مادة االينمور
+
+[قسم] Glass Ionomer Restoration MOD
+
+[قسم] OPR25
+
+[قسم] )حشوه تجميلية من مادة الكمبوزت على سطح واحد من السن (كبيرة
+
+[قسم] Class I posterior composite (extensive)
+
+[قسم] OPR26 حشوه تجميلية من مادة الكمبوزت
+
+[قسم] )على سطحين من السن (كبيرة
+
+[قسم] Class II posterior composite (extensive)
+
+[قسم] OPR27 حشوه تجميلية من مادة الكمبوزت مع بناء جدار او أكثر للسن
+
+[قسم] Composite restoration build up
+
+[قسم] OPR28 حشوه تجميلية من مادة االينمور من الدرجة الخامسة
+
+[قسم] Class V Glass Ionomer restoration
+
+[قسم] OPR29 حشوه تجميلية من مادة الكمبوزت مع تغطية اللب
+
+[قسم] Composite restoration (direct or indirect pulp capping)
+
+[قسم] ORT01 دراسة حالة تقويمية مع التشخيص
+
+[قسم] Assessment of Orthodontic Case Including Models
+
+[قسم] ORT02 جهاز تقويم متحرك علوي
+
+[قسم] Upper Removable Appliance
+
+[قسم] ORT03 موسعة فك
+
+[قسم] Expansion Screw RME
+
+[قسم] ORT04 موسعة فك
+
+[قسم] Quad - Helix
+
+[قسم] ORT05 جهاز مانع العادات المسيئة لالسنان
+
+[قسم] Habit Breaker
+
+[قسم] ORT06 جهاز وظيفي
+
+[قسم] Functional Appliance
+
+[قسم] ORT07 جهاز خارجي للرأس
+
+[قسم] Head gear Treatment
+
+[قسم] ORT08 تقويم جزئي
+
+[قسم] Sectional 2*4
+
+[قسم] ORT09 تقويم ثابت / فك واحد
+
+[قسم] Fixed Appliance / 1 Jaw
+
+[قسم] ORT10 تقويم أسنان (حالة وسطى)
+
+[قسم] Fixed Appliance / Moderate Case
+
+[قسم] ORT11 تقويم أسنان (حالة كبرى)
+
+[قسم] Fixed Appliance / Major Case
+
+[قسم] ORT12 جهاز تثبيت (فك واحد)
+
+[قسم] Retainer / 1 Jaw
+
+[قسم] ORT13
+
+[قسم] جهاز)تثبيت ( ثابت
+
+[قسم] Fixed Retainer
+
+[قسم] ORT14 جهاز خارجي للرأس بالسحب المعاكس
+
+[قسم] Reverse pull head gear
+
+[قسم] ORT15 تقويم ثابت خزفي / فك واحد
+
+[قسم] Fixed Appliance_Ceramic Bracket / 1 Jaw
+
+[قسم] ORT16
+
+[قسم] )تقويم أسنان خزفي (حالة وسطى
+
+[قسم] Fixed Appliance_Ceramic Bracket / Moderate Case
+
+[قسم] ORT17
+
+[قسم] )تقويم أسنان خزفي (حالة كبرى
+
+[قسم] Fixed Appliance_Ceramic Bracket / Major Case
+
+[قسم] ORT18 التقويم غير المرئي / مرحلة
+
+[قسم] Clear aligner / stage
+
+[قسم] ORT19 اصالح كسر في جهاز التقويم
+
+[قسم] Repairing orthodontic appliance
+
+[قسم] ORT20 زرعات تقويمية داعمة
+
+[قسم] Orthodontic insertion of mini screw
+
+[قسم] PED01 معالجة سلوكية / زيارة
+
+[قسم] Behavior Management / Visit
+
+[قسم] PED02 معالجة االسنان بالفلورايد
+
+[قسم] Fluoride Application
+
+[قسم] PED03 خلع سن لبني
+
+[قسم] Extraction of Deciduous Tooth
+
+[قسم] PED04
+
+[قسم] سد اخاديد االسنان / السن
+
+[قسم] الواحد
+
+[قسم] Fissure Sealent / Tooth
+
+[قسم] PED05 حشوة وقائية للطواحين الدائمة من الدرجة االولى
+
+[قسم] PRR I (Conservative Adhesive Restoration – CAR)
+
+[قسم] PED06 حشوة وقائية للطواحين الدائمة من الدرجة الثانية
+
+[قسم] PRR II (Conservative Adhasive Restoration – CAR)
+
+[قسم] PED07
+
+[قسم] حشوة
+
+[قسم] وقائية للطواحين الدائمة من الدرجة الثالثة
+
+[قسم] PRR III (Conservative Adhesive Restoration – CAR)
+
+[قسم] PED08 حشوة فضة على سطح واحد من السن اللبني
+
+[قسم] Class I Amalgam Deciduous Tooth
+
+[قسم] PED09 حشوة فضة على سطحين من السن اللبني
+
+[قسم] Class II Amalgam Deciduous Tooth
+
+[قسم] PED10
+
+[قسم] حشوة فضة على3 أسطح من السن اللبني
+
+[قسم] Amalgam MOD Deciduous Tooth
+
+[قسم] PED11 حشوة تجميلية من الكمبوزت على سطح واحد من السن
+
+[قسم] Class I Posterior Composite Deciduous Tooth
+
+[قسم] PED12 حشوة تجميلية من الكمبوزت على سطحين من السن اللبني
+
+[قسم] Class II Posterior Deciduous Tooth
+
+[قسم] PED13 حشوة تجميلية من الكمبوزت على ثالث أسطح من السن اللبني
+
+[قسم] Posterior Composite MOD Deciduous Tooth
+
+[قسم] PED14 حشوة تجميلية من الكمبوزت من الدرجة الثالثة السن اللبني
+
+[قسم] Class III Composite Deciduous Tooth
+
+[قسم] PED15 حشوة تجميلية من الكمبوزت من الدرجة الرابعة السن اللبني
+
+[قسم] Class IV Composite Deciduous Tooth
+
+[قسم] PED16 حشوة تجميلية من الكمبوزت من الدرجة الخامسة السن اللبني
+
+[قسم] Class V Composite Deciduous Tooth
+
+[قسم] PED17 وجه تجميلي أمامي من الكمبوزت / لألطفال
+
+[قسم] Composite Facing Deciduous Tooth
+
+[قسم] PED18 حشوة تجميلية من مادة االينمور من الدرجة االولى / السن اللبني
+
+[قسم] Class I Glass Ionomer Restoration Deciduous Tooth
+
+[قسم] PED19 حشوة تجميلية من مادة االينمور من الدرجة الثانية / السن اللبني
+
+[قسم] Class II Glass Ionomer Restoration Deciduous Tooth
+
+[قسم] PED20 حشوة تجميلية من مادة االينمور / السن اللبني
+
+[قسم] Glass Ionomer Restoration MOD Deciduous Tooth
+
+[قسم] PED21 تاج ستانلس ستيل / السن اللبني
+
+[قسم] Stainless Steel Crown / Deciduous Tooth
+
+[قسم] PED22 تاج ستانلس ستيل / السن الدائم
+
+[قسم] Stainless Steel Crown / Permanen Tooth
+
+[قسم] PED23 تاج تجميلي لألطفال
+
+[قسم] Strip Crown
+
+[قسم] PED24 بتر جزئي لللب الحي لكل سن لبني
+
+[قسم] Pulpotomy - Deciduous Tooth
+
+[قسم] PED25 بتر كلي لللب الحي لكل سن لبني
+
+[قسم] PULPECTOMY - Deciduous tooth
+
+[قسم] PED26 متابعة حالة عالج عصب / زيارة
+
+[قسم] Intrim Dressing / Endo or Apexification / visit
+
+[قسم] PED27 تثبيت األسنان المتعرضة لألصابة
+
+[قسم] Splinting of Traumatized Teeth
+
+[قسم] PED28 حافظ المسافات السنان االطفال / فك واحد
+
+[قسم] Space Maintainer / One Jaw
+
+[قسم] PED29 مبلغ اضافي للعالج تحت التركين
+
+[قسم] Treatment Under Sedation / Additional Charge
+
+[قسم] PED30 حافظ مسافات جهة واحدة من الفك
+
+[قسم] Unilateral Space Maintainer
+
+[قسم] PED31 جهاز ثابت لتعويض أسنان االطفال االمامية
+
+[قسم] Fixed Replacement of Anterior teeth for Children
+
+[قسم] PED32 عالج اللب مع حشوة للقناة الواحدة
+
+[قسم] Endodontic Treatment with G/P filling / One Canal
+
+[قسم] PED33 إغالق ذروة العصب بمادة الكالسيوم
+
+[قسم] Apexification
+
+[قسم] PED34 قلع سن دائم / اطفال
+
+[قسم] Extraction of permanent teeth in children
+
+[قسم] PED35 تعليمات العناية بالفم والمشورة الغذائية
+
+[قسم] OHI
+
+[قسم] & Diet counseling
+
+[قسم] PED36 تقليع الرواسب الكلسية مع الصقل /فك واحد
+
+[قسم] Scaling
+
+[قسم] & Polishing /jaw for children
+
+[قسم] PED37 معالجة اللب غير المباشرة لالسنان اللبنية
+
+[قسم] Indirect pulp treatment for deciduous teeth
+
+[قسم] PED38 معالجة اللب غير المباشرة لالسنان الدائمة/اطفال
+
+[قسم] Indirect pulp treatment for permanent teeth in children
+
+[قسم] PED39 تغطية اللب المباشرة لالسنان الدائمة/اطفال
+
+[قسم] Direct pulp capping for permanent teeth in children
+
+[قسم] PED40
+
+[قسم] cvek
+
+[قسم] بتر جزئي للب بطريقة
+
+[قسم] Cvek Pulpotomy for permanent teeth in children
+
+[قسم] PED41
+
+[قسم] tooth mousse
+
+[قسم] اضافة مادة ال
+
+[قسم] Tooth mousse application
+
+[قسم] PED42 حافظ مسافات اكريلي متحرك
+
+[قسم] Removable space maintainer replacing teeth
+
+[قسم] PED43 اصالح حافظ مسافات السنان االطفال
+
+[قسم] Repair of space maintainer space maintainer
+
+[قسم] PED44 تخفيف مناطق التقاء االسنان
+
+[قسم] Iterdental stripping of teeth
+
+[قسم] PED45 قلع سن لبني امامي
+
+[قسم] Extraction of deciduous Anterior teeth
+
+[قسم] PED46 قلع سن لبني خلفي
+
+[قسم] Extraction of deciduous Posterior teeth
+
+[قسم] PER01 إزالة الناميات الرخوة جراحيا
+
+[قسم] Removal of Epulis
+
+[قسم] PER02 تقليع الرواسب الكلسية مع الصقل / لكل جلسة
+
+[قسم] Scaling
+
+[قسم] & Polishing / 1 Jaw
+
+[قسم] PER03
+
+[قسم] التجريف اللثوي لجذور االسنان لمقطع من6 أسنان
+
+[قسم] Root Planning / Quadrant
+
+[قسم] PER04 تطويل التاج جراحيا / السن الواحد
+
+[قسم] Crown Lengthening / Tooth
+
+[قسم] PER05 عملية قطع اللثة لكل سن
+
+[قسم] Gingivectomy / tooth
+
+[قسم] PER06 تجميل اللثة للسن الواحد
+
+[قسم] Gingivoplasty / tooth
+
+[قسم] PER07 عملية الشرائح المفتوحة
+
+[قسم] Periodontal Flap
+
+[قسم] PER08 جراحة التطعيم اللثوي لسن واحد
+
+[قسم] Gingival Graft (FGG or CTG) / One Tooth
+
+[قسم] PER09 قطع جراحي لضرس شامال الشريحة اللثوية
+
+[قسم] Hemisection or Resection Tooth
+
+[قسم] PER10 عمليات التعويض العظمي جراحيا للسن الواحد
+
+[قسم] Bone Graft / Tooth
+
+[قسم] PER11
+
+[قسم] ( تثبيت االسنان لغايات معالجة اللثة بواسطة مادة الكمبوزتD
+
+[قسم] )
+
+[قسم] Splinting of Periodontally Compromised Teeth By Composite
+
+[قسم] PER12 تثبيت االسنان بالصفائح المعدنية لغاية ستة اسنان
+
+[قسم] Splinting of Teeth by Metal Plates Up 6 Teeth
+
+[قسم] PER13
+
+[قسم] ( إعادة بناء األنسجة باستعمال األغشيةC
+
+[قسم] )
+
+[قسم] Guided Tissue Regeneration
+
+[قسم] PER14 تهيئة الجذور
+
+[قسم] Root Preparation / Conditioning
+
+[قسم] PER15 تقليل الحساسية
+
+[قسم] Desensitization
+
+[قسم] RPR01 جهاز حامي أسنان / لين
+
+[قسم] Night Guard / Soft
+
+[قسم] RPR02 جهاز حامي أسنان / صلب
+
+[قسم] Night Guard / Hard
+
+[قسم] RPR03 صفيحة جزئية اكريلية بسن واحد
+
+[قسم] Acrylic RPD with One Tooth
+
+[قسم] RPR04 مبلغ إضافي عن كل سن في الصفيحة الجزيئية االكريلية
+
+[قسم] Additional Charge For Each Additional Tooth On RPD
+
+[قسم] RPR05 طقم كامل لفكين من مادة االكريل
+
+[قسم] Acrylic Complete Denture / 2 Jaw
+
+[قسم] RPR06 صفيحة جزئية من الكروم كوبلت / فك واحد
+
+[قسم] Cr - Co RPD / 1 Jaw
+
+[قسم] RPR07 طقم كامل من الكروم كوبالت / فكين
+
+[قسم] Cr - Co / 2 Jaw
+
+[قسم] RPR08 تبطين كامل لطقم واحد اكريل ساخن
+
+[قسم] Relining for Denture
+
+[قسم] RPR09 تبديل قاعدة طقم لفك واحد
+
+[قسم] Rebase for One Denture
+
+[قسم] RPR10 إصالح كسر في صفيحة اكريلية
+
+[قسم] Repairing Acrylic Denture Complete or PD
+
+[قسم] RPR11 الروابط الدقيقة للتركيبات / للوحدة
+
+[قسم] Prosthetic Precision Attachment / Unit
+
+[قسم] RPR12 تعويض عظم الفك باالكريل
+
+[قسم] Obturator
+
+[قسم] RPR13 صفيحة اكريلية لفك واحد كامل
+
+[قسم] Arylic Complete Denture / 1 Jaw
+
+[قسم] RPR14 طقم فوقي من مادة االكريل لفك واحد
+
+[قسم] Acrylic over denture / 1 jaw
+
+[قسم] RPR15 طقم فوقي من مادة الكروم كوبالت لفك واحد
+
+[قسم] Cobalt - Chromium over denture / 1 jaw
+
+[قسم] RPR16 جديد تبطين طقم داخل العيادة
+
+[قسم] Chair side reline
+
+[قسم] SUR01 قلع بسيط
+
+[قسم] Simple Extraction
+
+[قسم] SUR02 قلع مع فصل جذور
+
+[قسم] Extraction With Root Separation
+
+[قسم] SUR03 قلع بسيط لجذر باقي
+
+[قسم] Simple Extraction of A Remaining root
+
+[قسم] SUR04 قلع جراحي لجذر باقي
+
+[قسم] Surgical Extraction of A Remaining Root
+
+[قسم] SUR05 قلع سن مطمور جزئيا بالنسج الرخوة
+
+[قسم] Extraction of A Soft Tissue Impacted Tooth
+
+[قسم] SUR06 قلع سن مطمور جزئيا بالعظم
+
+[قسم] Extraction of Half Bony Impacted Tooth
+
+[قسم] SUR07 قلع سن مطمور كليا بالعظم
+
+[قسم] Extraction of Full Bony Impacted Tooth
+
+[قسم] SUR08
+
+[قسم] فتح جراحي لسن مطمور
+
+[قسم] بالنسج الرخوة
+
+[قسم] Surgical Exposure of A Soft Tissue Impacted Tooth
+
+[قسم] SUR09 فتح جراحي لسن مطمور بالعظم
+
+[قسم] Surgical Exposure of Bony Impacted Tooth
+
+[قسم] SUR10 تجذيب النتوء السخي البسيط
+
+[قسم] Simple Alveoplasty
+
+[قسم] SUR11 تجذيب النتوء السنخي المعقد / ربع
+
+[قسم] Complex Alveoplasty / Quadrant
+
+[قسم] SUR12 تصغير الحدبة الفكية
+
+[قسم] Maxillary Tubeosity Reduction
+
+[قسم] SUR13 الحافة الضرصية النامية / جانب
+
+[قسم] Mylohyoid Ridge Reduction / Side
+
+[قسم] SUR14 رأب الحدبة الدقنية
+
+[قسم] Genial Tubercle Reduction
+
+[قسم] SUR15 إزالة النتوء العظمي الحنكي
+
+[قسم] Removal of Maxillary Tori
+
+[قسم] SUR16 إزالة النتوء العظمي في الفك السفلي
+
+[قسم] Removal of Mandibular Tori
+
+[قسم] SUR17 إزالة نسج رخوة متحركة
+
+[قسم] Reduction of Hypermobile Soft Tissue
+
+[قسم] SUR18 استئصال اللجام الشفوي
+
+[قسم] Labial Frenectomy
+
+[قسم] SUR19 استئصال اللجام اللساني
+
+[قسم] Lingual Frenectomy
+
+[قسم] SUR20 رأب الفك بطعم عظمي / ربع الفك
+
+[قسم] Jaw Augmentation With Bone Graft / up to 1 quadrant
+
+[قسم] SUR21 رأب الفك بطعم ال عضوي
+
+[قسم] Jaw Augmentation With Alloplastic Material
+
+[قسم] SUR22 تعميق الدهليز / ربع
+
+[قسم] Sulcus Deepening / Quadrant
+
+[قسم] SUR23 رفع جيوب
+
+[قسم] )الفك الغير مباشر (لكل جانب
+
+[قسم] Indirect Sinus Lift / side
+
+[قسم] SUR24
+
+[قسم] )رفع جيوب الفك المباشر (لكل جانب
+
+[قسم] Direct Sinus Lift / Side
+
+[قسم] SUR25 شق داخل فموي
+
+[قسم] Intraoral Incision And Drainage
+
+[قسم] SUR26 شق بسيط خارج فموي
+
+[قسم] Simple Extraoral Incision And Drainage
+
+[قسم] SUR27 قطع ذروة سن أمامية
+
+[قسم] Apicectomy of Anterior Tooth
+
+[قسم] SUR28 قطع ذروة سن خلفي
+
+[قسم] Apicectomy of Posterior Tooth
+
+[قسم] SUR29 معالجة جراحية اللتهاب العظم
+
+[قسم] Surgical Treatment of Osteomyelitis
+
+[قسم] SUR30 اغالق ناسور جيبي حنكي
+
+[قسم] Closure of Oro-Antral Fistula
+
+[قسم] SUR31
+
+[قسم] )اغالق ناسور بطريقة (كولد ويل الك
+
+[قسم] Cald Well Luc Approach
+
+[قسم] SUR32 ازالة حصاة من الغدة اللعابية
+
+[قسم] Removal of A Stone From Salivary Gland Duct
+
+[قسم] SUR33 استئصال ورم ضفدعي
+
+[قسم] Excision of Sublingual Gland / Ranula
+
+[قسم] SUR34 استئصال كيس لعابي
+
+[قسم] Excision of A Mucocele
+
+[قسم] SUR35 رد خلع المفصل الفكي الصدغي
+
+[قسم] Closed Reduction of TMJ Dislocation
+
+[قسم] SUR36 رد وتثبيت كسر في الفك
+
+[قسم] Closed Reduction & Fixation of A Fractured Jaw
+
+[قسم] SUR37 تثبيت االسنان باالسالك
+
+[قسم] Interdental Wiring
+
+[قسم] SUR38 إزالة اسالك تثبيت االسنان
+
+[قسم] Removal of Interdental Wiring
+
+[قسم] SUR39 ربط الفكين
+
+[قسم] Intermaxillary Fixation (IMF)
+
+[قسم] SUR40 إزالة ربط الفكين
+
+[قسم] Removal of IMF
+
+[قسم] SUR41 خياط الجروح الوجهية المتهتكة البسيطة
+
+[قسم] Suturing of Minor Facial Lacerations
+
+[قسم] SUR42 خزعة نسج رخوة
+
+[قسم] Soft Tissue Biopsy
+
+[قسم] SUR43 خزعة من العظم
+
+[قسم] Bone Biopsy
+
+[قسم] SUR44 شفط باالبرة
+
+[قسم] Fine Needle Aspiration
+
+[قسم] SUR45 استئصال وترميم اّفة صغيرة
+
+[قسم] Excision With Primary Closure / Small Lession
+
+[قسم] SUR46 استئصال وترميم اّفة كبيرة
+
+[قسم] Excision With Primary Closure / Large Lession
+
+[قسم] SUR47 المرحلة االولى الجراحية لزرعة سنية
+
+[قسم] First Stage Implant Surgery Per IMPLANT
+
+[قسم] SUR48 المرحلة الثانية الجراحية لزرعة سنية
+
+[قسم] Second Stage Implant Surgery Per IMPLANT
+
+[قسم] SUR49 زيادة الحرف السني بدون استخدام غشاء
+
+[قسم] Ridge Augmentation Without A Membrane
+
+[قسم] SUR50 زيادة الحرف السني باستخدام غشاء
+
+[قسم] Ridge Augmentation With A Membrane
+
+[قسم] SUR51
+
+[قسم] إزالة كيس فكي اصغر من3 سم
+
+[قسم] Jaw Cyst Enucleation / Up to 3 cm
+
+[قسم] SUR52
+
+[قسم] إزالة كيس فكي اكبر من3 سم
+
+[قسم] Jaw Cyst Enucleation / More than 3 cm
+
+[قسم] SUR53 إزالة كيس دهني
+
+[قسم] Excision of Sebaceous Cyst
+
+[قسم] SUR54 إزالة النسج الرخوة
+
+[قسم] Operculectomy
+
+[قسم] SUR55 صفيحة جراحية تقويمية
+
+[قسم] Orthodontic Surgical Wafer
+
+[قسم] UD1 غير محدد
+
+[قسم] Un Defined

@@ -1,0 +1,12 @@
+dist
+coverage
+reports
+node_modules
+.git
+.kilo
+.qodo
+.venv
+.venv-1
+.vs
+.vscode
+package-lock.json

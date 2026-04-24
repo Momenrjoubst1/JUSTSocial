@@ -1,0 +1,7 @@
+{
+  "generic": "An unexpected error occurred.",
+  "network": "Network error. Please check your connection.",
+  "unauthorized": "You are not authorized to perform this action.",
+  "notFound": "The requested resource was not found.",
+  "pageError": "Something went wrong on this page."
+}

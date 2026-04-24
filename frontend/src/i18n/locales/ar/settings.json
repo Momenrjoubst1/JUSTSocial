@@ -1,0 +1,45 @@
+{
+  "pageTitle": "الإعدادات • JUST Social",
+  "tabs": {
+    "security": "الأمان والخصوصية",
+    "preferences": "التفضيلات",
+    "panic": "وضع الطوارئ"
+  },
+  "security": {
+    "sectionTitle": "الأمان والخصوصية",
+    "sectionDescription": "مفاتيح التشفير من طرف إلى طرف وسجل النشاط.",
+    "encryptionTitle": "تشفير المحادثة",
+    "statusActive": "نشط",
+    "encryptionDescription": "رسائلك ووسائطك ومكالماتك محمية بتشفير هجين قوي من طرف إلى طرف. لا يمكن قراءة المحتوى إلا منك ومن الطرف الآخر.",
+    "fingerprintLabel": "بصمة هويتك",
+    "keysBackedUp": "تمت مزامنة المفاتيح بأمان مع خزنتك الآمنة.",
+    "keysSyncing": "جارٍ مزامنة المفاتيح مع الخزنة الآمنة...",
+    "dashboardTitle": "لوحة الأمان",
+    "dashboardDescription": "مراقبة حية للتشفير، حالة المسارات المتعددة، والإشراف النشط."
+  },
+  "preferences": {
+    "sectionTitle": "تفضيلات التطبيق",
+    "sectionDescription": "خصص تجربتك وواجهة الاستخدام."
+  },
+  "panic": {
+    "sectionTitle": "وضع الطوارئ",
+    "sectionDescription": "بروتوكول طوارئ قصوى للحالات العدائية.",
+    "protocolTitle": "بروتوكول المسح الطارئ",
+    "protocolDescription": "أنشئ رمز PIN وهميًا ثانويًا. إذا أدخلت هذا الرمز على شاشة الفتح تحت الإكراه، سيقوم JUST Social بتدمير مفاتيحك المحلية ومسح النسخ السحابية بصمت، ليبدو الحساب فارغًا وغير قابل للاسترجاع.",
+    "fakePinLabel": "رمز الطوارئ الوهمي",
+    "fakePinPlaceholder": "يجب أن يكون سهل التذكر تحت الضغط، مثل 0000",
+    "confirmFakePinLabel": "تأكيد الرمز الوهمي",
+    "confirmFakePinPlaceholder": "أعد إدخال الرمز الوهمي",
+    "contactLabel": "معرّف جهة اتصال SOS (اختياري)",
+    "contactPlaceholder": "معرّف المستخدم الذي سيتم تنبيهه بصمت",
+    "contactHelp": "سنرسل له رسالة آلية صامتة تحتوي على بصمة موقعك عند التفعيل.",
+    "activate": "تفعيل البروتوكول",
+    "successSaved": "تم حفظ إعدادات وضع الطوارئ بنجاح.",
+    "errors": {
+      "enterPin": "يرجى إدخال رمز PIN.",
+      "pinsMismatch": "رمزا PIN غير متطابقين.",
+      "pinMinLength": "يجب أن يتكون رمز PIN من 4 أرقام على الأقل.",
+      "saveFailed": "فشل حفظ رمز الطوارئ."
+    }
+  }
+}

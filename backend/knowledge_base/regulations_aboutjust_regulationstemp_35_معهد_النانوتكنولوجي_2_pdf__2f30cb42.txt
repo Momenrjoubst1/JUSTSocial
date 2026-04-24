@@ -1,0 +1,224 @@
+العنوان: 2.pdf
+الرابط: https://www.just.edu.jo/aboutjust/RegulationsTemp/35%20%20%D9%85%D8%B9%D9%87%D8%AF%20%D8%A7%D9%84%D9%86%D8%A7%D9%86%D9%88%D8%AA%D9%83%D9%86%D9%88%D9%84%D9%88%D8%AC%D9%8A/2.pdf
+اسم الملف: 2.pdf
+
+==============================
+
+
+[قسم] قرار مجلس العمداء رقم4/
+
+[قسم] ، بتاريخ92
+
+[قسم] /0/
+9102م.
+
+[قسم] أسعار الخدمات التي يقدمها معهد النانوتكنولوجي1
+قرر مجلس العمداء اعتماد أسعار الفحوصات على األجهزة الموجودة في معهد النانوتكنولوجي اعتباراً من تاريخ صدور هذا القرار
+
+[قسم] رقم قرار
+
+[قسم] مجلس العمد
+
+[قسم] اء
+
+[قسم] Notes
+
+[قسم] Single Sample
+
+[قسم] cost(JD)
+
+[قسم] Analysis Type
+
+[قسم] Device Name
+
+[قسم] The researcher should provide
+
+[قسم] the design
+
+[قسم] 120/sample
+
+[قسم] Nanostructures fabrication
+
+[قسم] Electron beam lithography
+
+[قسم] 70/sample
+
+[قسم] Contact Mode
+
+[قسم] Atomic Force Microscopy
+
+[قسم] (AFM)
+
+[قسم] Contact angle
+
+[قسم] measurements
+
+[قسم] Drop shape analyzer
+
+[قسم] the cell ready for
+
+[قسم] Solar Cells illumination
+
+[قسم] (0-1 sun)
+
+[قسم] LED solar Simulator
+
+[قسم] the cell ready for
+
+[قسم] Solar Cells illumination
+
+[قسم] (1 - 12 suns)
+
+[قسم] High power solar
+
+[قسم] simulator
+
+[قسم] the device ready for
+
+[قسم] 15/sample
+
+[قسم] I-V characteristics for
+
+[قسم] electronics and biosensors
+
+[قسم] Parameter analyzer
+
+[قسم] 50/ sample
+
+[قسم] Thin films thickness,
+
+[قسم] reflection and optical
+
+[قسم] properties
+
+[قسم] Ellipsometery
+
+[قسم] 100/sample
+
+[قسم] Nano indentation
+
+[قسم] Nanomechanical Test
+
+[قسم] System
+
+[قسم] (Vertex 80v) MIR
+
+[قسم] Vacuum system
+
+[قسم] (Vertex 80v) /FIR
+
+[قسم] (Vertex 80v) /NIR
+
+[قسم] (Vertex 80v)/UV-Vis
+
+[قسم] IR spectra
+
+[قسم] FTIR Microscope
+
+[قسم] Surface roughness and 3D
+
+[قسم] profiling
+
+[قسم] Optical 3D profiler
+
+[قسم] The researcher need to
+
+[قسم] provide the deposition
+
+[قسم] materials
+
+[قسم] 15/sample
+
+[قسم] Nanomaterials monolayer
+
+[قسم] deposition
+
+[قسم] Langmuir deposition
+
+[قسم] system
+
+[قسم] The researcher need to
+
+[قسم] provide the mask and
+
+[قسم] substructure
+
+[قسم] Photolithography and
+
+[قسم] fabrication
+
+[قسم] SU-8 Lithography system
+
+[قسم] Stereo Microscope
+
+[قسم] 50/sample
+
+[قسم] Micro and Nano
+
+[قسم] manipulation
+
+[قسم] Optical tweezer
+
+[قسم] Max Processes time per set 2
+
+[قسم] hours
+
+[قسم] Annealing under vacuum,
+
+[قسم] N2, or Ar environment
+
+[قسم] Tabular furnace
+
+[قسم] Max Processes time per set 2
+
+[قسم] hours
+
+[قسم] 25/ sample
+
+[قسم] Nanomaterials Synthesis in
+
+[قسم] N2 environment
+
+[قسم] Glove Box
+
+[قسم] DIC/ Microscope
+
+[قسم] 90/sample
+
+[قسم] Transmission microscopy
+
+[قسم] STEM
+
+[قسم] 60/sample
+
+[قسم] SEM microscope
+
+[قسم] 12/Run
+
+[قسم] Gold or Platinum coating
+
+[قسم] Sputter coater
+
+[قسم] Measurement Range
+
+[قسم] (0.3nm-5µm)
+
+[قسم] 18/Sample
+
+[قسم] Size measurement
+
+[قسم] Zetasizer Nano ZS90
+
+[قسم] 18/sample
+
+[قسم] Zeta potential
+
+[قسم] Zetasizer Nano ZS90
+
+[قسم] 30/ sample
+
+[قسم] Quantity &Quality
+
+[قسم] analysis for elements
+
+[قسم] EDX

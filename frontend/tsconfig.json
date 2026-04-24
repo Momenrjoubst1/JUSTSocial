@@ -1,0 +1,44 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "useDefineForClassFields": true,
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "types": [
+      "node",
+      "vite/client"
+    ],
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    /* Path mapping */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "@shared/*": [
+        "../packages/shared/src/*"
+      ]
+    },
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": [
+    "src",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
+}

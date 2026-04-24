@@ -1,0 +1,45 @@
+{
+  "pageTitle": "Settings • JUST Social",
+  "tabs": {
+    "security": "Security & Privacy",
+    "preferences": "Preferences",
+    "panic": "Panic Mode"
+  },
+  "security": {
+    "sectionTitle": "Security & Privacy",
+    "sectionDescription": "End-to-end encryption keys and activity history.",
+    "encryptionTitle": "Chat Encryption",
+    "statusActive": "Active",
+    "encryptionDescription": "Your messages, media, and calls are secured with military-grade hybrid end-to-end encryption. Only you and your recipient can read them.",
+    "fingerprintLabel": "Your Identity Fingerprint",
+    "keysBackedUp": "Keys are safely synchronized to your secure vault.",
+    "keysSyncing": "Synchronizing keys to secure vault...",
+    "dashboardTitle": "Security Dashboard",
+    "dashboardDescription": "Live monitoring of encryption, multi-path status, and active moderation."
+  },
+  "preferences": {
+    "sectionTitle": "App Preferences",
+    "sectionDescription": "Customize your experience and interface."
+  },
+  "panic": {
+    "sectionTitle": "Panic Mode",
+    "sectionDescription": "Extreme emergency protocol for hostile situations.",
+    "protocolTitle": "Emergency Wipe Protocol",
+    "protocolDescription": "Create a secondary fake PIN. If you enter this PIN on the unlock screen under duress, JUST Social will silently destroy your local keys and wipe your cloud backups, making the account appear empty and irretrievable.",
+    "fakePinLabel": "Fake Panic PIN",
+    "fakePinPlaceholder": "Must be memorable under stress (e.g. 0000)",
+    "confirmFakePinLabel": "Confirm Fake PIN",
+    "confirmFakePinPlaceholder": "Re-enter fake PIN",
+    "contactLabel": "SOS Contact ID (Optional)",
+    "contactPlaceholder": "User UUID to alert silently",
+    "contactHelp": "We will send them a silent automated message containing your location hash when triggered.",
+    "activate": "Activate Protocol",
+    "successSaved": "Panic Mode settings saved successfully.",
+    "errors": {
+      "enterPin": "Please enter a PIN.",
+      "pinsMismatch": "PINs do not match.",
+      "pinMinLength": "PIN must be at least 4 digits.",
+      "saveFailed": "Failed to save Panic PIN."
+    }
+  }
+}
